@@ -32,7 +32,40 @@ function required(name: string): string {
 
 export const serverConfig = {
   get razorpayKeyId() {
-    return required("RAZORPAY_KEY_ID");
+    const keyId = required("RAZORPAY_KEY_ID");
+
+    /**
+     * Guard against shipping a TEST key to production (and against a live key
+     * in a dev environment). Razorpay key ids are prefixed `rzp_test_` or
+     * `rzp_live_`, so the mode is knowable at startup.
+     *
+     * Without this, a deploy that forgets to swap the key fails silently: the
+     * page looks fine, checkout opens, buyers "pay" with test cards and no
+     * money ever arrives. That is usually discovered days later.
+     */
+    const allowTestInProd = process.env.ALLOW_TEST_KEY_IN_PROD === "1";
+
+    /**
+     * NOTE ON THE CONDITION: we deliberately do NOT key this off NODE_ENV.
+     * `next start` sets NODE_ENV=production for ordinary local production
+     * builds, so that check would block routine local testing with a test key.
+     *
+     * A real deployment is identified by the host injecting a deployment
+     * marker (Vercel sets VERCEL_ENV=production; other hosts can set
+     * DEPLOY_ENV=production). Only then is a test key an actual mistake.
+     */
+    const isRealDeployment =
+      process.env.VERCEL_ENV === "production" || process.env.DEPLOY_ENV === "production";
+
+    if (isRealDeployment && keyId.startsWith("rzp_test_") && !allowTestInProd) {
+      throw new Error(
+        "Refusing to serve payments: a Razorpay TEST key (rzp_test_*) is configured " +
+          "on a PRODUCTION deployment. No real money would be collected. Set the live " +
+          "rzp_live_* key and its matching secret, or set ALLOW_TEST_KEY_IN_PROD=1 if " +
+          "this deployment is a deliberate staging environment."
+      );
+    }
+    return keyId;
   },
   get razorpayKeySecret() {
     return required("RAZORPAY_KEY_SECRET");
@@ -70,6 +103,13 @@ export const serverConfig = {
         process.env.PRODUCT_DOWNLOAD_URL &&
         process.env.ACCESS_TOKEN_SECRET
     );
+  },
+  /** "test" | "live" | "unknown" — derived from the key id prefix. */
+  get razorpayMode(): "test" | "live" | "unknown" {
+    const keyId = process.env.RAZORPAY_KEY_ID || "";
+    if (keyId.startsWith("rzp_test_")) return "test";
+    if (keyId.startsWith("rzp_live_")) return "live";
+    return "unknown";
   },
 };
 
