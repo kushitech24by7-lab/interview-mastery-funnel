@@ -18,6 +18,24 @@ import "server-only";
  *   ACCESS_TOKEN_SECRET      SECRET — signs the short-lived access token
  */
 
+/**
+ * A deployment MISCONFIGURATION, as opposed to a gateway or network failure.
+ *
+ * These are distinguished because the two need opposite responses: a gateway
+ * blip is worth retrying and the buyer should be told "try again", whereas a
+ * config fault will fail identically forever until an operator changes an
+ * environment variable. Telling a buyer to retry in that case wastes their
+ * time and hides the real problem from whoever can fix it.
+ */
+export class PaymentConfigError extends Error {
+  readonly code: string;
+  constructor(code: string, message: string) {
+    super(message);
+    this.name = "PaymentConfigError";
+    this.code = code;
+  }
+}
+
 function required(name: string): string {
   const value = process.env[name];
   if (!value || value.trim() === "") {
@@ -58,11 +76,13 @@ export const serverConfig = {
       process.env.VERCEL_ENV === "production" || process.env.DEPLOY_ENV === "production";
 
     if (isRealDeployment && keyId.startsWith("rzp_test_") && !allowTestInProd) {
-      throw new Error(
+      throw new PaymentConfigError(
+        "test_key_in_production",
         "Refusing to serve payments: a Razorpay TEST key (rzp_test_*) is configured " +
           "on a PRODUCTION deployment. No real money would be collected. Set the live " +
-          "rzp_live_* key and its matching secret, or set ALLOW_TEST_KEY_IN_PROD=1 if " +
-          "this deployment is a deliberate staging environment."
+          "rzp_live_* key and its matching secret in your hosting provider's environment " +
+          "variables and redeploy, or set ALLOW_TEST_KEY_IN_PROD=1 if this deployment is " +
+          "a deliberate staging environment."
       );
     }
     return keyId;
