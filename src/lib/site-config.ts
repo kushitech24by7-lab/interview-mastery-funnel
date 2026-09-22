@@ -95,7 +95,7 @@ export const siteConfig = {
    * This copy exists only so the CTA can tell, before any network call, whether
    * payments are configured at all. The KEY SECRET never appears here.
    */
-  RAZORPAY_KEY_ID: "rzp_test_Tf73r1WhlzsLyv",
+  RAZORPAY_KEY_ID: "rzp_test_TfCLQ0myy5107Y",
 
   // ── Analytics (brief §46) ─────────────────────────────────────────────────
   META_PIXEL_ID: "[META_PIXEL_ID]",
