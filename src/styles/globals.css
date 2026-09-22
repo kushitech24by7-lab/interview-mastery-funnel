@@ -1,0 +1,153 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-sans: "Inter", "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    /* Height of the sticky mobile purchase bar, used to pad the page bottom
+       so the bar never covers the last FAQ answer (brief §41). */
+    --sticky-bar-height: 4.75rem;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  body {
+    @apply bg-white text-ink antialiased;
+    font-family: var(--font-sans);
+    /* Guards against any single wide child causing horizontal scroll on 360px. */
+    overflow-x: hidden;
+  }
+
+  /* Visible focus for keyboard users (brief §49). */
+  :focus-visible {
+    outline: 3px solid theme("colors.amber.500");
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-semibold tracking-tight text-navy-950;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Reserve space so late-loading images don't shift layout (brief §48). */
+  img {
+    height: auto;
+  }
+}
+
+@layer components {
+  .container-page {
+    @apply mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8;
+  }
+
+  .section {
+    @apply py-14 sm:py-20 lg:py-24;
+  }
+
+  .eyebrow {
+    @apply text-fluid-xs font-semibold uppercase tracking-[0.14em] text-teal-700;
+  }
+
+  .h2 {
+    @apply text-fluid-3xl leading-[1.12];
+  }
+
+  .lede {
+    @apply text-fluid-lg leading-relaxed text-ink-soft;
+  }
+
+  /* 48px minimum tap target (brief §40). */
+  .btn {
+    @apply inline-flex min-h-[3rem] items-center justify-center gap-2 rounded-xl2 px-6 py-3
+           text-fluid-base font-semibold transition-colors duration-150
+           disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .btn-primary {
+    @apply btn bg-amber-500 text-navy-950 shadow-card hover:bg-amber-400 active:bg-amber-600;
+  }
+
+  .btn-secondary {
+    @apply btn border-2 border-navy-200 bg-white text-navy-900 hover:border-navy-300 hover:bg-navy-50;
+  }
+
+  .btn-ghost-light {
+    @apply btn border-2 border-white/25 bg-white/10 text-white hover:bg-white/20;
+  }
+
+  .card {
+    @apply rounded-xl2 border border-navy-100 bg-white shadow-card;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full bg-navy-50 px-3 py-1
+           text-fluid-xs font-medium text-navy-700;
+  }
+
+  /* Horizontal swipe rails for mobile (brief §40). */
+  .swipe-rail {
+    @apply flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+    scroll-padding-left: 1rem;
+  }
+
+  .swipe-rail > * {
+    @apply snap-start shrink-0;
+  }
+
+  .swipe-rail::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .swipe-rail::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-navy-200;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Respects the iPhone home-indicator area for the sticky bar (brief §41). */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
