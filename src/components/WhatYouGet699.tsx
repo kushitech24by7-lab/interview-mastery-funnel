@@ -82,6 +82,8 @@ export default function WhatYouGet699() {
             <CheckoutButton
               label={`Get instant access — ${displayPrices.special}`}
               location="what_you_get_699"
+              showTrustLine
+              trustLineOnDark
             />
           </div>
           <p className="mt-3 text-fluid-xs text-navy-300">

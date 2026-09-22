@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { siteConfig, isPlaceholder, supportMailto } from "@/lib/site-config";
 import { track, getAttribution } from "@/lib/analytics";
 
@@ -29,6 +30,15 @@ interface Props {
   className?: string;
   location: string;
   fullWidth?: boolean;
+  /**
+   * Shows the "Secure payment • Digital delivery • Refund • Privacy" line.
+   * Opt-in: this button appears ~9 times on the page, and repeating the trust
+   * line under every one would be clutter rather than reassurance. Enable it
+   * at the points where someone is actually deciding to pay.
+   */
+  showTrustLine?: boolean;
+  /** Set on dark (navy) backgrounds so the trust line stays legible. */
+  trustLineOnDark?: boolean;
 }
 
 const RAZORPAY_SCRIPT = "https://checkout.razorpay.com/v1/checkout.js";
@@ -59,6 +69,8 @@ export default function CheckoutButton({
   className = "",
   location,
   fullWidth = false,
+  showTrustLine = false,
+  trustLineOnDark = false,
 }: Props) {
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -307,6 +319,36 @@ export default function CheckoutButton({
           </>
         )}
       </button>
+
+      {/*
+        Trust line (§4). Deliberately small and single-line so it reassures
+        without competing with the CTA — but the policy links are real <a>
+        elements at readable contrast, not grey micro-text, because a buyer
+        checking them is exactly the buyer worth reassuring.
+      */}
+      {showTrustLine && (
+      <p
+        className={`mt-2.5 text-center text-fluid-xs leading-relaxed ${
+          trustLineOnDark ? "text-navy-200" : "text-ink-soft"
+        }`}
+      >
+        Secure payment <span aria-hidden="true">•</span> Digital delivery{" "}
+        <span aria-hidden="true">•</span>{" "}
+        <Link
+          href={siteConfig.REFUND_POLICY_URL}
+          className={`font-medium underline ${trustLineOnDark ? "text-teal-300" : "text-teal-700"}`}
+        >
+          Refund Policy
+        </Link>{" "}
+        <span aria-hidden="true">•</span>{" "}
+        <Link
+          href={siteConfig.PRIVACY_URL}
+          className={`font-medium underline ${trustLineOnDark ? "text-teal-300" : "text-teal-700"}`}
+        >
+          Privacy Policy
+        </Link>
+      </p>
+      )}
 
       {mode === "test" && (
         <p className="mt-2 text-center text-fluid-xs font-semibold text-amber-700">

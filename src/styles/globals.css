@@ -107,6 +107,39 @@
            text-fluid-xs font-medium text-navy-700;
   }
 
+  /*
+    Typography for the published legal pages. Deliberately generous line-height
+    and a capped measure: these pages are read by anxious buyers checking
+    whether the business is real, and by Meta's landing-page reviewers.
+  */
+  .legal-body {
+    @apply text-fluid-base leading-relaxed text-ink;
+  }
+
+  .legal-body h2 {
+    @apply mt-8 text-fluid-xl font-bold text-navy-950;
+  }
+
+  .legal-body h3 {
+    @apply mt-6 text-fluid-base font-bold text-navy-950;
+  }
+
+  .legal-body p {
+    @apply mt-3 max-w-prose;
+  }
+
+  .legal-body ul {
+    @apply mt-3 max-w-prose list-disc space-y-1.5 pl-5 marker:text-teal-600;
+  }
+
+  .legal-body a {
+    @apply font-medium text-teal-700 underline;
+  }
+
+  .legal-body strong {
+    @apply font-semibold text-navy-950;
+  }
+
   /* Horizontal swipe rails for mobile (brief §40). */
   .swipe-rail {
     @apply flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4;

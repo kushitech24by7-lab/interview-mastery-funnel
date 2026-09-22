@@ -57,33 +57,28 @@ export const siteConfig = {
   REFERENCE_PRICE: "₹2,499",
 
   // ── Support (brief §32 — buyers must see who to contact) ──────────────────
-  SUPPORT_EMAIL: "[SUPPORT_EMAIL]",
+  SUPPORT_EMAIL: "support@interviewmastery.shop",
   /** Digits only with country code, e.g. "919876543210". Leave placeholder to hide WhatsApp UI. */
   SUPPORT_WHATSAPP: "[SUPPORT_WHATSAPP]",
   SUPPORT_HOURS: "[e.g. Mon–Sat, 10am–7pm IST]",
 
   // ── Legal (brief §50 — placeholders, never invented policies) ─────────────
   /**
-   * The registered merchant name on the Razorpay account. This may legitimately
-   * differ from the customer-facing brand, so it stays separate (§51) and is
-   * NOT auto-filled with "Interview Mastery".
+   * The business name shown on legal pages and in the checkout trust block.
+   * No registration number, GSTIN, PAN or registered address is recorded here
+   * because none has been supplied — and inventing one would be a false
+   * statutory disclosure.
    */
-  LEGAL_BUSINESS_NAME: "[LEGAL_BUSINESS_NAME]",
-  /**
-   * These routes exist and render, but their CONTENT is placeholder text that
-   * must be replaced with real policies before launch. See src/app/(legal)/.
-   */
+  LEGAL_BUSINESS_NAME: "Interview Mastery",
+  /** Published legal routes. See src/app/(legal)/. */
   TERMS_URL: "/terms",
   PRIVACY_URL: "/privacy-policy",
   REFUND_POLICY_URL: "/refund-policy",
   CONTACT_URL: "/contact",
   DISCLAIMER_URL: "/disclaimer",
-  /**
-   * Brief §36: the FAQ must state the real refund policy. Until you supply it,
-   * the FAQ says the policy is published at the refund link rather than
-   * inventing terms. Replace with your actual policy sentence.
-   */
-  REFUND_POLICY_SUMMARY: "[ACTUAL_REFUND_POLICY — e.g. 'This is a digital product delivered immediately after payment. Refunds are handled as described in our Refund Policy.']",
+  /** One-line summary shown in the FAQ; the full terms live at /refund-policy. */
+  REFUND_POLICY_SUMMARY:
+    "Complete Interview Mastery is a digital product delivered immediately after payment. If you are charged twice, or you pay but cannot access the files and support cannot resolve it, contact us within 7 days and we will review a refund. Because the material is downloadable, change-of-mind requests may not qualify once the files have been substantially accessed.",
 
   // ── Payments (public key only) ────────────────────────────────────────────
   /**
@@ -106,6 +101,8 @@ export const siteConfig = {
   OG_IMAGE: "/og/complete-interview-mastery.jpg",
   /** Apex domain is canonical; www redirects to it (§34). */
   CANONICAL_HOST: "interviewmastery.shop",
+  /** Shown on the legal pages. Update when a policy materially changes. */
+  POLICY_LAST_UPDATED: "September 23, 2026",
 
   // ── Feature flags ─────────────────────────────────────────────────────────
   /**

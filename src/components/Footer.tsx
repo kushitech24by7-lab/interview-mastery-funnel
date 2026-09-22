@@ -12,7 +12,6 @@ import { track } from "@/lib/analytics";
  */
 
 export default function Footer() {
-  const year = new Date().getFullYear();
   const mailto = supportMailto(`Support — ${siteConfig.PRODUCT_NAME}`);
   const whatsapp = whatsappLink(`Hi, I have a question about ${siteConfig.PRODUCT_NAME}.`);
 
@@ -94,14 +93,20 @@ export default function Footer() {
                       {link.label} <span className="text-amber-500/70">[not configured]</span>
                     </span>
                   ) : (
-                    <a href={link.url} className="hover:text-white hover:underline">
+                    <a
+                      href={link.url}
+                      className="inline-flex min-h-[2rem] items-center text-navy-200 underline-offset-2 hover:text-white hover:underline"
+                    >
                       {link.label}
                     </a>
                   )}
                 </li>
               ))}
               <li>
-                <a href="#faq" className="hover:text-white hover:underline">
+                <a
+                  href="/#faq"
+                  className="inline-flex min-h-[2rem] items-center text-navy-200 underline-offset-2 hover:text-white hover:underline"
+                >
                   FAQ
                 </a>
               </li>
@@ -122,11 +127,7 @@ export default function Footer() {
             processor and does not endorse this product.
           </p>
           <p className="mt-4 text-fluid-xs text-navy-500">
-            © {year}{" "}
-            {isPlaceholder(siteConfig.LEGAL_BUSINESS_NAME)
-              ? siteConfig.BRAND_NAME
-              : siteConfig.LEGAL_BUSINESS_NAME}
-            . All rights reserved.
+            © 2026 {siteConfig.LEGAL_BUSINESS_NAME}. All rights reserved.
           </p>
         </div>
       </div>
