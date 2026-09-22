@@ -63,6 +63,18 @@ export default function CheckoutButton({
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
+  /**
+   * Synchronous re-entry guard.
+   *
+   * `disabled={busy}` alone is not enough: React state updates are async, so a
+   * fast double-click (or a double-tap on mobile, which is common on payment
+   * buttons) can enter handleClick twice before the re-render disables it.
+   * That creates two Razorpay orders for one buyer. A ref flips immediately,
+   * in the same tick, so the second click is dropped.
+   */
+  const inFlight = useRef(false);
+  /** "test" once the server reports a test-mode key, so the UI can say so. */
+  const [mode, setMode] = useState<string | null>(null);
 
   useEffect(() => {
     mounted.current = true;
@@ -72,12 +84,17 @@ export default function CheckoutButton({
   }, []);
 
   const handleClick = useCallback(async () => {
+    // Drop the click if a checkout attempt is already running (see `inFlight`).
+    if (inFlight.current) return;
+    inFlight.current = true;
+
     setError(null);
     track("PricingCTA_Click", { location });
     track("InitiateCheckout", { location });
 
     // Pre-launch guard: without a configured key, explain rather than fail silently.
     if (isPlaceholder(siteConfig.RAZORPAY_KEY_ID)) {
+      inFlight.current = false;
       setStatus("error");
       setError(
         "Checkout is not configured yet. Set RAZORPAY_KEY_ID and the server environment variables — see DEPLOYMENT.md."
@@ -105,6 +122,8 @@ export default function CheckoutButton({
       if (!orderResponse.ok) {
         throw new Error(orderData?.message || "We could not start the payment. Please try again.");
       }
+
+      if (orderData.mode) setMode(orderData.mode);
 
       const razorpay = new window.Razorpay!({
         key: orderData.keyId,
@@ -138,6 +157,7 @@ export default function CheckoutButton({
                 verifyData.orderId
               )}&payment_id=${encodeURIComponent(verifyData.paymentId)}`;
             } else {
+              inFlight.current = false;
               track("PaymentFailure", { location, reason: verifyData?.error || "verification_failed" });
               if (mounted.current) {
                 setStatus("error");
@@ -149,6 +169,9 @@ export default function CheckoutButton({
               }
             }
           } catch {
+            // Deliberately NOT releasing the guard: the payment may well have
+            // succeeded and only the confirmation call failed. Re-enabling the
+            // button here would invite a second charge for the same purchase.
             track("PaymentFailure", { location, reason: "verify_network_error" });
             if (mounted.current) {
               setStatus("error");
@@ -161,6 +184,9 @@ export default function CheckoutButton({
 
         modal: {
           ondismiss: () => {
+            // The buyer closed the modal without paying — release the guard so
+            // they can retry. This is the normal "changed my mind" path.
+            inFlight.current = false;
             if (mounted.current) setStatus("idle");
             track("PaymentFailure", { location, reason: "checkout_dismissed" });
           },
@@ -169,6 +195,8 @@ export default function CheckoutButton({
 
       razorpay.on("payment.failed", (resp: unknown) => {
         const failure = resp as { error?: { description?: string; metadata?: { payment_id?: string } } };
+        // Card declined / UPI timeout etc. Release so the buyer can try another method.
+        inFlight.current = false;
         track("PaymentFailure", { location, reason: failure?.error?.description || "payment_failed" });
         if (mounted.current) {
           setStatus("error");
@@ -184,6 +212,8 @@ export default function CheckoutButton({
       razorpay.open();
       if (mounted.current) setStatus("idle");
     } catch (err) {
+      // Script load or order creation failed; no modal is open, so release.
+      inFlight.current = false;
       const message = err instanceof Error ? err.message : "Something went wrong. Please try again.";
       track("PaymentFailure", { location, reason: "checkout_init_error" });
       if (mounted.current) {
@@ -217,6 +247,12 @@ export default function CheckoutButton({
           </>
         )}
       </button>
+
+      {mode === "test" && (
+        <p className="mt-2 text-center text-fluid-xs font-semibold text-amber-700">
+          Razorpay TEST mode — no real money will be charged.
+        </p>
+      )}
 
       {status === "verifying" && (
         <p role="status" className="mt-2 text-center text-fluid-xs text-ink-soft">

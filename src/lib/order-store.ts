@@ -52,6 +52,24 @@ const inMemoryStore: OrderStore = {
   async markPaid(orderId, paymentId) {
     const existing = memory.get(orderId);
     if (!existing) return null;
+
+    // IDEMPOTENT. Razorpay retries webhooks until it receives a 2xx, so this
+    // runs more than once for a single payment — and the browser verify call
+    // hits it too. Re-applying the write would move `paidAt` forward on every
+    // retry and, worse, let a later event overwrite the original paymentId.
+    // An already-paid order is therefore returned unchanged.
+    if (existing.status === "paid") {
+      if (existing.paymentId && existing.paymentId !== paymentId) {
+        // Two different payments against one order: never silently overwrite.
+        console.warn(
+          "[order-store] markPaid called with a different paymentId for an " +
+            "already-paid order; keeping the original.",
+          { orderId, existing: existing.paymentId, incoming: paymentId }
+        );
+      }
+      return existing;
+    }
+
     const updated: OrderRecord = {
       ...existing,
       status: "paid",
@@ -64,6 +82,23 @@ const inMemoryStore: OrderStore = {
   async markFailed(orderId, reason) {
     const existing = memory.get(orderId);
     if (!existing) return;
+
+    // A paid order is terminal. Razorpay can deliver a `payment.failed` for an
+    // earlier declined attempt AFTER a later attempt on the same order
+    // succeeded; letting that downgrade the record would deny access to
+    // someone who actually paid. Record the reason, keep the paid status.
+    if (existing.status === "paid") {
+      console.warn("[order-store] markFailed on an already-paid order; keeping paid.", {
+        orderId,
+        reason,
+      });
+      memory.set(orderId, {
+        ...existing,
+        notes: { ...(existing.notes || {}), lateFailureEvent: reason || "unknown" },
+      });
+      return;
+    }
+
     memory.set(orderId, {
       ...existing,
       status: "failed",

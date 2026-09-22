@@ -138,6 +138,9 @@ export async function POST(request: Request) {
       amount,
       currency,
       keyId: serverConfig.razorpayKeyId, // public key — safe to expose
+      // Lets the UI show an unmistakable "TEST MODE" badge, so nobody mistakes
+      // a test transaction for a real one (or vice versa) during a launch.
+      mode: serverConfig.razorpayMode,
     });
   } catch (error) {
     console.error("[create-order] failed:", error);
