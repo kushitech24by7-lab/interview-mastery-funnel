@@ -86,7 +86,16 @@ export const siteConfig = {
   REFUND_POLICY_SUMMARY: "[ACTUAL_REFUND_POLICY — e.g. 'This is a digital product delivered immediately after payment. Refunds are handled as described in our Refund Policy.']",
 
   // ── Payments (public key only) ────────────────────────────────────────────
-  RAZORPAY_KEY_ID: "[RAZORPAY_KEY_ID]",
+  /**
+   * PUBLIC key id — safe in the browser bundle. This is a TEST key; swap it for
+   * the live `rzp_live_*` key when you go live.
+   *
+   * The key actually used by the checkout modal is the one the SERVER returns
+   * from /api/razorpay/create-order (read from the RAZORPAY_KEY_ID env var).
+   * This copy exists only so the CTA can tell, before any network call, whether
+   * payments are configured at all. The KEY SECRET never appears here.
+   */
+  RAZORPAY_KEY_ID: "rzp_test_Tf73r1WhlzsLyv",
 
   // ── Analytics (brief §46) ─────────────────────────────────────────────────
   META_PIXEL_ID: "[META_PIXEL_ID]",

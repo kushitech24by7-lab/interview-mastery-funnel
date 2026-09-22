@@ -28,6 +28,9 @@ const recentByIp = new Map<string, number[]>();
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 10;
 
+/** Razorpay's documented minimum order amount: 100 paise (₹1). */
+const MIN_AMOUNT_PAISE = 100;
+
 function rateLimited(ip: string): boolean {
   const now = Date.now();
   const hits = (recentByIp.get(ip) || []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
@@ -77,6 +80,23 @@ export async function POST(request: Request) {
     const amount = serverConfig.pricePaise; // server-authoritative
     const currency = serverConfig.currency;
 
+    // Razorpay rejects anything below 100 paise (₹1). Catching it here gives a
+    // clear operator-facing error instead of an opaque gateway rejection that
+    // the buyer would see as a generic "could not start payment".
+    if (amount < MIN_AMOUNT_PAISE) {
+      console.error(
+        `[create-order] PRODUCT_PRICE_PAISE is ${amount}, below Razorpay's ${MIN_AMOUNT_PAISE} paise minimum.`
+      );
+      return NextResponse.json(
+        {
+          error: "invalid_amount",
+          message:
+            "Checkout is misconfigured and cannot accept payments right now. Please contact support.",
+        },
+        { status: 500 }
+      );
+    }
+
     const razorpay = new Razorpay({
       key_id: serverConfig.razorpayKeyId,
       key_secret: serverConfig.razorpayKeySecret,
@@ -121,6 +141,27 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("[create-order] failed:", error);
+
+    // Razorpay returns 401 when the key id/secret pair is wrong, revoked, or a
+    // test key is used against live mode. This is by far the most common setup
+    // error, so it gets its own branch — a generic 500 sends the operator
+    // hunting through application code when the fix is an env var.
+    const status = (error as { statusCode?: number })?.statusCode;
+    if (status === 401) {
+      console.error(
+        "[create-order] Razorpay authentication failed. Check RAZORPAY_KEY_ID / " +
+          "RAZORPAY_KEY_SECRET, and that both belong to the same (test or live) mode."
+      );
+      return NextResponse.json(
+        {
+          error: "payment_auth_failed",
+          message:
+            "We could not reach the payment gateway. No amount has been charged. Please try again shortly or contact support.",
+        },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json(
       {
         error: "order_creation_failed",
