@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import Script from "next/script";
+import { Analytics } from "@vercel/analytics/next";
 import "@/styles/globals.css";
 import { siteConfig, isPlaceholder } from "@/lib/site-config";
 
@@ -91,6 +92,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </a>
 
         {children}
+        <Analytics />
 
         {/* Meta Pixel — base code only. Purchase fires from the verified success page. */}
         {pixelEnabled && (
