@@ -57,7 +57,7 @@ export const siteConfig = {
   REFERENCE_PRICE: "₹2,499",
 
   // ── Support (brief §32 — buyers must see who to contact) ──────────────────
-  SUPPORT_EMAIL: "[SUPPORT_EMAIL]",
+  SUPPORT_EMAIL: "suport@interviewmastery.com",
   /** Digits only with country code, e.g. "919876543210". Leave placeholder to hide WhatsApp UI. */
   SUPPORT_WHATSAPP: "[SUPPORT_WHATSAPP]",
   SUPPORT_HOURS: "[e.g. Mon–Sat, 10am–7pm IST]",
@@ -68,7 +68,7 @@ export const siteConfig = {
    * differ from the customer-facing brand, so it stays separate (§51) and is
    * NOT auto-filled with "Interview Mastery".
    */
-  LEGAL_BUSINESS_NAME: "[LEGAL_BUSINESS_NAME]",
+  LEGAL_BUSINESS_NAME: "Interview Mastery",
   /**
    * These routes exist and render, but their CONTENT is placeholder text that
    * must be replaced with real policies before launch. See src/app/(legal)/.
@@ -95,7 +95,7 @@ export const siteConfig = {
    * This copy exists only so the CTA can tell, before any network call, whether
    * payments are configured at all. The KEY SECRET never appears here.
    */
-  RAZORPAY_KEY_ID: "rzp_test_TfCLQ0myy5107Y",
+  RAZORPAY_KEY_ID: "rzp_test_TfSDZuZH4688Vv",
 
   // ── Analytics (brief §46) ─────────────────────────────────────────────────
   META_PIXEL_ID: "[META_PIXEL_ID]",
