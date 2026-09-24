@@ -5,7 +5,7 @@ import CheckoutButton from "./CheckoutButton";
 import ProductCover from "./ProductCover";
 import { products } from "@/lib/products";
 import { siteConfig } from "@/lib/site-config";
-import { pricing, displayPrices } from "@/lib/pricing";
+import { pricing, displayPrices, ctaLabels } from "@/lib/pricing";
 import { captureAttribution, track } from "@/lib/analytics";
 import type { HeroVariant } from "@/lib/variants";
 
@@ -75,8 +75,8 @@ export default function Hero({ variant }: Props) {
             {/* Proof row (brief §8) */}
             <ul className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 text-fluid-sm font-semibold text-white">
               {[
+                `${siteConfig.TOTAL_PRODUCTS} interview resources`,
                 `${siteConfig.TOTAL_PAGES} pages`,
-                `${siteConfig.TOTAL_PRODUCTS} resources`,
                 `${siteConfig.TOTAL_QUESTIONS} questions`,
                 `${siteConfig.TOTAL_STAR_EXAMPLES} STAR examples`,
               ].map((item, i) => (
@@ -89,7 +89,8 @@ export default function Hero({ variant }: Props) {
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
               <CheckoutButton
-                label={`Get Complete Interview Mastery — ${displayPrices.special}`}
+                label={ctaLabels.primary}
+                shortLabel={ctaLabels.short}
                 location="hero"
                 className="w-full sm:w-auto"
               />
@@ -105,8 +106,9 @@ export default function Hero({ variant }: Props) {
             {/* Payment microcopy — answers "is this safe / recurring?" immediately */}
             <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-fluid-xs text-navy-200">
               <TrustItem>One-time payment</TrustItem>
-              <TrustItem>Secure Razorpay checkout</TrustItem>
-              <TrustItem>Digital access after successful payment</TrustItem>
+              <TrustItem>Instant digital access</TrustItem>
+              <TrustItem>Yours to keep</TrustItem>
+              <TrustItem>Secure checkout</TrustItem>
             </div>
 
             {/*

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { siteConfig } from "@/lib/site-config";
-import { displayPrices } from "@/lib/pricing";
+import { displayPrices, ctaLabels } from "@/lib/pricing";
 import { track } from "@/lib/analytics";
 
 /**
@@ -15,10 +15,14 @@ import { track } from "@/lib/analytics";
  *    real pricing card or duplicates the CTA the visitor is already looking at.
  *  • Respects the iOS home-indicator inset, and the page reserves matching
  *    bottom padding so the bar never covers the final FAQ answer.
- *  • Mobile only — desktop has the sticky pricing card instead.
+ *  • On desktop it renders as a slim bar with the same rules. The sticky
+ *    pricing CARD only sticks while the pricing section is in view, so on a
+ *    page this long a desktop visitor could scroll several screens between the
+ *    hero CTA and the next one. This keeps a priced CTA one click away
+ *    throughout, which is where most of the CTA-visibility gain on desktop is.
  */
 
-export default function StickyMobileCTA() {
+export default function StickyPurchaseBar() {
   const [visible, setVisible] = useState(false);
   const [pricingInView, setPricingInView] = useState(false);
 
@@ -48,17 +52,20 @@ export default function StickyMobileCTA() {
 
   return (
     <div
-      className={`fixed inset-x-0 bottom-0 z-40 border-t border-navy-800 bg-navy-950/95 backdrop-blur-sm transition-transform duration-200 lg:hidden ${
+      className={`fixed inset-x-0 bottom-0 z-40 border-t border-navy-800 bg-navy-950/95 backdrop-blur-sm transition-transform duration-200 motion-reduce:transition-none ${
         shown ? "translate-y-0" : "translate-y-full"
       }`}
       // Hidden from assistive tech when off-screen so it is not announced twice.
       aria-hidden={!shown}
     >
       <div className="pb-safe">
-        <div className="flex items-center gap-3 px-4 py-3">
+        <div className="container-page flex items-center gap-3 px-4 py-3">
           <div className="min-w-0 flex-1">
             <p className="truncate text-fluid-xs font-semibold text-white">
               {siteConfig.PRODUCT_NAME}
+              <span className="hidden text-navy-300 lg:inline">
+                {" "}· {siteConfig.TOTAL_PAGES} pages · yours to keep
+              </span>
             </p>
             {/*
               Only the current price appears here. ₹5,688 / ₹2,608 / ₹2,499
@@ -76,7 +83,8 @@ export default function StickyMobileCTA() {
             onClick={() => track("StickyCTA_Click", { location: "sticky_mobile" })}
             className="btn-primary shrink-0 px-5 py-2.5 text-fluid-sm"
           >
-            Get access
+            <span className="lg:hidden">Get access</span>
+            <span className="hidden lg:inline">{ctaLabels.short}</span>
           </a>
         </div>
       </div>

@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { stages, productByCode } from "@/lib/products";
 import { observeSection, track } from "@/lib/analytics";
 import CheckoutButton from "./CheckoutButton";
+import { ctaLabels } from "@/lib/pricing";
 
 /**
  * THE SIGNATURE SECTION (brief §1 + §12).
@@ -99,7 +100,7 @@ export default function SixStageSystem() {
         </ol>
 
         <div className="mt-12 flex justify-center">
-          <CheckoutButton label="Get the complete system" location="six_stage_system" />
+          <CheckoutButton label={ctaLabels.short} location="six_stage_system" />
         </div>
       </div>
     </section>

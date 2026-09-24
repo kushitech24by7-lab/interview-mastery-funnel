@@ -27,6 +27,12 @@ type Status = "idle" | "loading" | "verifying" | "error";
 
 interface Props {
   label?: string;
+  /**
+   * Optional shorter label used below `sm`. Both are rendered and one is
+   * hidden by CSS, so there is no user-agent sniffing and no layout shift
+   * after hydration. Use it where the full label would wrap on a phone.
+   */
+  shortLabel?: string;
   className?: string;
   location: string;
   fullWidth?: boolean;
@@ -66,6 +72,7 @@ function loadRazorpayScript(): Promise<boolean> {
 
 export default function CheckoutButton({
   label = "Get Complete Interview Mastery",
+  shortLabel,
   className = "",
   location,
   fullWidth = false,
@@ -314,7 +321,14 @@ export default function CheckoutButton({
           </>
         ) : (
           <>
-            {label}
+            {shortLabel ? (
+              <>
+                <span className="sm:hidden">{shortLabel}</span>
+                <span className="hidden sm:inline">{label}</span>
+              </>
+            ) : (
+              label
+            )}
             <ArrowIcon />
           </>
         )}
@@ -336,14 +350,14 @@ export default function CheckoutButton({
         <span aria-hidden="true">•</span>{" "}
         <Link
           href={siteConfig.REFUND_POLICY_URL}
-          className={`font-medium underline ${trustLineOnDark ? "text-teal-300" : "text-teal-700"}`}
+          className={`link-inline font-medium ${trustLineOnDark ? "text-teal-300" : "text-teal-700"}`}
         >
           Refund Policy
         </Link>{" "}
         <span aria-hidden="true">•</span>{" "}
         <Link
           href={siteConfig.PRIVACY_URL}
-          className={`font-medium underline ${trustLineOnDark ? "text-teal-300" : "text-teal-700"}`}
+          className={`link-inline font-medium ${trustLineOnDark ? "text-teal-300" : "text-teal-700"}`}
         >
           Privacy Policy
         </Link>

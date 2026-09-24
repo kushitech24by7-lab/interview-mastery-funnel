@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useState, useCallback } from "react";
 import { track } from "@/lib/analytics";
+import { siteConfig } from "@/lib/site-config";
 
 /**
  * Real product preview gallery (brief §28 + §55).
@@ -164,19 +165,25 @@ export default function PreviewGallery() {
  * plainly instead of substituting invented imagery.
  */
 function PreviewPlaceholder() {
+  /*
+   * MAINTAINER NOTE — never render build instructions here.
+   * A previous version printed "Developer note: add the exported pages to
+   * /public/previews…" to every visitor, which reads as an unfinished site at
+   * the exact moment the buyer is deciding whether to trust it. Setup steps
+   * belong in comments and DEPLOYMENT.md, never in customer-facing JSX.
+   *
+   * To publish previews: export pages to /public/previews using the `src`
+   * filenames in the `previews` array above, then set `available: true`.
+   */
   return (
-    <div className="mx-auto mt-10 max-w-2xl rounded-xl2 border-2 border-dashed border-navy-200 bg-sand p-8 text-center">
+    <div className="mx-auto mt-10 max-w-2xl rounded-xl2 border border-navy-200 bg-sand p-8 text-center">
       <p className="text-fluid-base font-semibold text-navy-950">
-        Page previews are being prepared.
+        Sample pages are being prepared.
       </p>
       <p className="mx-auto mt-2 max-w-md text-fluid-sm text-ink-soft">
-        We only publish real pages exported from the actual resources. Rather than show mock-ups,
-        this section stays empty until those exports are in place.
-      </p>
-      <p className="mt-4 text-fluid-xs text-ink-faint">
-        Developer note: add the exported pages to <code className="rounded bg-white px-1.5 py-0.5">/public/previews</code>{" "}
-        and set <code className="rounded bg-white px-1.5 py-0.5">available: true</code> in{" "}
-        <code className="rounded bg-white px-1.5 py-0.5">PreviewGallery.tsx</code>.
+        We only publish real pages taken from the actual resources, so this section stays empty
+        until those are ready. The full contents of all {siteConfig.TOTAL_PRODUCTS} resources are
+        listed above.
       </p>
     </div>
   );

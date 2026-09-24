@@ -98,6 +98,20 @@
     @apply btn border-2 border-white/25 bg-white/10 text-white hover:bg-white/20;
   }
 
+  /*
+   * Inline policy/support links inside a sentence.
+   *
+   * These sit at 15–18px tall, well under the 44px touch minimum, and several
+   * of them are in the checkout trust block — the worst possible place for a
+   * mis-tap, because the buyer is mid-decision. Making the links themselves
+   * 44px tall would wreck the line spacing of the paragraphs they live in, so
+   * the hit area is extended with vertical padding and a negative margin: the
+   * target grows, the text flow does not move.
+   */
+  .link-inline {
+    @apply relative -my-2 inline-block py-2 underline underline-offset-2;
+  }
+
   .card {
     @apply rounded-xl2 border border-navy-100 bg-white shadow-card;
   }

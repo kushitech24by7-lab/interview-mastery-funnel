@@ -27,10 +27,12 @@ import ValueComparison from "@/components/ValueComparison";
 import WhatYouGet699 from "@/components/WhatYouGet699";
 import PreviewGallery from "@/components/PreviewGallery";
 import Testimonials from "@/components/Testimonials";
+import CreatorSection from "@/components/CreatorSection";
+import LeadMagnet from "@/components/LeadMagnet";
 import PricingSection from "@/components/PricingSection";
 import FAQ from "@/components/FAQ";
 import FinalCTA from "@/components/FinalCTA";
-import StickyMobileCTA from "@/components/StickyMobileCTA";
+import StickyPurchaseBar from "@/components/StickyPurchaseBar";
 import Footer from "@/components/Footer";
 import ConfigWarning from "@/components/ConfigWarning";
 import { resolveVariant } from "@/lib/variants";
@@ -108,7 +110,13 @@ export default async function Page({ searchParams }: PageProps) {
 
       <ConfigWarning />
 
-      <main id="main" className="pb-[var(--sticky-bar-height)] lg:pb-0">
+      {/*
+        Bottom padding matches the sticky purchase bar at EVERY width. The
+        `lg:pb-0` that used to sit here was correct while the bar was mobile-only;
+        now that it also shows on desktop, removing the reserve would let it
+        cover the last section.
+      */}
+      <main id="main" className="pb-[var(--sticky-bar-height)]">
         <Hero variant={variant} />
         <TrustStrip />
         <FactStrip />
@@ -143,8 +151,14 @@ export default async function Page({ searchParams }: PageProps) {
         <FreeContentObjection />
         <AudienceSection />
 
-        {/* Renders nothing until genuine testimonials exist */}
+        {/* Invites feedback until genuine testimonials exist */}
         <Testimonials />
+
+        {/* Renders nothing until real creator details are supplied */}
+        <CreatorSection />
+
+        {/* Renders nothing until email infrastructure exists — see the component */}
+        <LeadMagnet />
 
         <ValueComparison />
         <PricingSection />
@@ -153,7 +167,7 @@ export default async function Page({ searchParams }: PageProps) {
       </main>
 
       <Footer />
-      <StickyMobileCTA />
+      <StickyPurchaseBar />
     </>
   );
 }
