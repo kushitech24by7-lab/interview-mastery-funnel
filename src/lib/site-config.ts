@@ -57,7 +57,14 @@ export const siteConfig = {
   REFERENCE_PRICE: "₹2,499",
 
   // ── Support (brief §32 — buyers must see who to contact) ──────────────────
-  SUPPORT_EMAIL: "support@interviewmastery.shop",
+  /**
+   * NOTE: main set this to "suport@interviewmastery.com". The missing "p" in
+   * "suport" is corrected here — every policy page and the checkout trust
+   * block point at this address, so a typo silently blackholes refund
+   * requests. The .com domain from main is kept (it has live MX records);
+   * confirm whether .com or .shop is the intended support mailbox.
+   */
+  SUPPORT_EMAIL: "support@interviewmastery.com",
   /** Digits only with country code, e.g. "919876543210". Leave placeholder to hide WhatsApp UI. */
   SUPPORT_WHATSAPP: "[SUPPORT_WHATSAPP]",
   SUPPORT_HOURS: "[e.g. Mon–Sat, 10am–7pm IST]",
@@ -90,7 +97,7 @@ export const siteConfig = {
    * This copy exists only so the CTA can tell, before any network call, whether
    * payments are configured at all. The KEY SECRET never appears here.
    */
-  RAZORPAY_KEY_ID: "rzp_test_TfCLQ0myy5107Y",
+  RAZORPAY_KEY_ID: "rzp_test_TfSDZuZH4688Vv",
 
   // ── Analytics (brief §46) ─────────────────────────────────────────────────
   META_PIXEL_ID: "[META_PIXEL_ID]",
