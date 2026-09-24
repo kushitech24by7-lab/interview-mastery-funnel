@@ -109,3 +109,33 @@ if (SAVINGS_VS_REGULAR_BUNDLE !== 1800) {
       `but the site advertises ₹1,800. Update the copy or the prices.`
   );
 }
+
+/**
+ * CANONICAL CTA LABELS.
+ *
+ * Every purchase CTA on the site uses one of these two. Mid-page buttons
+ * previously said "Get the question bank + frameworks", "Start practising
+ * properly" and "Get all 12 resources", which read as three different offers
+ * to a scanning visitor and hid the price until the pricing section. One
+ * repeated, priced phrase is easier to act on than five clever ones.
+ *
+ *   ctaLabels.primary → full name + price. Use in the hero and the final CTA.
+ *   ctaLabels.short   → price-led. Use mid-page and anywhere space is tight.
+ */
+export const ctaLabels = {
+  primary: `Get Complete Interview Mastery — ${displayPrices.special}`,
+  short: `Get Instant Access — ${displayPrices.special}`,
+} as const;
+
+/**
+ * Narrow-screen label for the hero CTA.
+ *
+ * At 375px the full "Get Complete Interview Mastery — ₹699" wraps onto three
+ * lines, which makes the single most important control on the page look
+ * broken. The short label keeps the price — the part that does the work — and
+ * fits on one line. Components swap on a media query, not on user agent.
+ */
+export const ctaLabelsResponsive = {
+  narrow: ctaLabels.short,
+  wide: ctaLabels.primary,
+} as const;

@@ -95,7 +95,7 @@ export default function Footer() {
                   ) : (
                     <a
                       href={link.url}
-                      className="inline-flex min-h-[2rem] items-center text-navy-200 underline-offset-2 hover:text-white hover:underline"
+                      className="inline-flex min-h-[2.75rem] items-center text-navy-200 underline-offset-2 hover:text-white hover:underline"
                     >
                       {link.label}
                     </a>
@@ -105,7 +105,7 @@ export default function Footer() {
               <li>
                 <a
                   href="/#faq"
-                  className="inline-flex min-h-[2rem] items-center text-navy-200 underline-offset-2 hover:text-white hover:underline"
+                  className="inline-flex min-h-[2.75rem] items-center text-navy-200 underline-offset-2 hover:text-white hover:underline"
                 >
                   FAQ
                 </a>

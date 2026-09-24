@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import CheckoutButton from "./CheckoutButton";
 import { siteConfig, isPlaceholder, supportMailto, whatsappLink } from "@/lib/site-config";
-import { pricing, displayPrices, priceLabels, SEPARATE_PURCHASE_NOTE } from "@/lib/pricing";
+import { pricing, displayPrices, priceLabels, SEPARATE_PURCHASE_NOTE, ctaLabels } from "@/lib/pricing";
 import { observeSection, track } from "@/lib/analytics";
 
 /**
@@ -144,7 +144,8 @@ export default function PricingSection() {
 
                 <div className="mt-6">
                   <CheckoutButton
-                    label={`Get instant access — ${displayPrices.special}`}
+                    label={ctaLabels.primary}
+                shortLabel={ctaLabels.short}
                     location="pricing_card"
                     fullWidth
                     showTrustLine

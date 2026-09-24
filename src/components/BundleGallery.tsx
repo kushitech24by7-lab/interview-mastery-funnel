@@ -5,7 +5,7 @@ import ProductCover from "./ProductCover";
 import CheckoutButton from "./CheckoutButton";
 import { products, productGroups, productsByGroup, type Product } from "@/lib/products";
 import { siteConfig } from "@/lib/site-config";
-import { displayPrices, formatINR } from "@/lib/pricing";
+import { displayPrices, formatINR, ctaLabels } from "@/lib/pricing";
 import { observeSection } from "@/lib/analytics";
 
 /**
@@ -84,7 +84,7 @@ export default function BundleGallery() {
           </p>
           <div className="mt-6 flex justify-center">
             <CheckoutButton
-              label={`Get all 12 resources — ${displayPrices.special}`}
+              label={ctaLabels.short}
               location="bundle_gallery"
             />
           </div>

@@ -33,12 +33,22 @@ const DEFAULT_SUB =
   "Complete Interview Mastery is a 12-resource preparation system that helps you understand what interviewers may ask, build truthful structured answers, improve spoken communication, practise with mock interviews, prepare for interview day, and handle follow-up and salary conversations.";
 
 export const heroVariants: Record<VariantKey, HeroVariant> = {
+  /**
+   * The default hero for cold traffic and direct visits.
+   *
+   * Leads with the TRANSFORMATION (walking in knowing how to prepare) rather
+   * than the problem (preparing one random question at a time). A
+   * problem-framed headline makes the visitor feel diagnosed; an
+   * outcome-framed one makes them feel the destination — and it is the
+   * destination they are paying ₹699 for.
+   */
   general: {
     key: "general",
     label: "A — General",
-    headline: "Stop preparing for interviews",
-    headlineAccent: "one random question at a time.",
-    subheadline: DEFAULT_SUB,
+    headline: "Walk into your next interview",
+    headlineAccent: "knowing exactly how to prepare.",
+    subheadline:
+      "Turn your experience into clear, structured answers. Practise the questions that matter, handle difficult questions with confidence, and walk into interview day with a system instead of guesswork.",
   },
   soon: {
     key: "soon",

@@ -3,7 +3,7 @@
 import CheckoutButton from "./CheckoutButton";
 import ProductCover from "./ProductCover";
 import { productByCode } from "@/lib/products";
-import { displayPrices } from "@/lib/pricing";
+import { displayPrices, ctaLabels } from "@/lib/pricing";
 import { siteConfig } from "@/lib/site-config";
 
 /**
@@ -80,7 +80,7 @@ export default function WhatYouGet699() {
           <p className="mt-2 text-fluid-sm font-medium text-white">One-time payment</p>
           <div className="mt-6 flex justify-center">
             <CheckoutButton
-              label={`Get instant access — ${displayPrices.special}`}
+              label={ctaLabels.short}
               location="what_you_get_699"
               showTrustLine
               trustLineOnDark

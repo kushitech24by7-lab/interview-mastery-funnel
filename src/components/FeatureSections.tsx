@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import CheckoutButton from "./CheckoutButton";
+import { ctaLabels } from "@/lib/pricing";
 import { frameworks, evidenceBank, questionCategories } from "@/lib/products";
 import { observeSection } from "@/lib/analytics";
 
@@ -100,7 +101,7 @@ export function QuestionFrameworkSection() {
         </div>
 
         <div className="mt-10 flex justify-center">
-          <CheckoutButton label="Get the question bank + frameworks" location="frameworks" />
+          <CheckoutButton label={ctaLabels.short} location="frameworks" />
         </div>
       </div>
     </section>
@@ -597,7 +598,7 @@ export function MockInterviewSection() {
         </div>
 
         <div className="mt-10 flex justify-center">
-          <CheckoutButton label="Start practising properly" location="mock_interview" />
+          <CheckoutButton label={ctaLabels.short} location="mock_interview" />
         </div>
       </div>
     </section>

@@ -12,8 +12,14 @@ const inter = Inter({
 
 const siteUrl = siteConfig.SITE_URL;
 
-const title = `${siteConfig.PRODUCT_NAME} | Interview Preparation System | ${siteConfig.BRAND_NAME}`;
-const description = `${siteConfig.PRODUCT_NAME} by ${siteConfig.BRAND_NAME} is a ${siteConfig.TOTAL_PRODUCTS}-resource digital interview preparation system with ${siteConfig.TOTAL_PAGES} pages, ${siteConfig.TOTAL_QUESTIONS} interview questions, ${siteConfig.TOTAL_STAR_EXAMPLES} STAR examples, mock interview practice, worksheets, research tools, interview-day preparation and salary negotiation guidance.`;
+/*
+ * Title and description are the ad for the ad. The previous description listed
+ * nine features in one sentence and was long enough for Google to truncate it
+ * mid-list — the reader saw inventory, not a reason to click. This version
+ * leads with what the buyer gets to do, and keeps the proof to one clause.
+ */
+const title = `${siteConfig.BRAND_NAME} | Complete Interview Preparation System`;
+const description = `Prepare for interviews with a structured system of question banks, STAR examples, worksheets, mock interview tools and planners. ${siteConfig.TOTAL_PRODUCTS} resources, one-time payment.`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -40,20 +46,14 @@ export const metadata: Metadata = {
     siteName: siteConfig.BRAND_NAME,
     title,
     description,
-    images: [
-      {
-        url: siteConfig.OG_IMAGE,
-        width: 1200,
-        height: 630,
-        alt: `${siteConfig.PRODUCT_NAME} — ${siteConfig.TOTAL_PRODUCTS} interview preparation resources`,
-      },
-    ],
+    // Images are supplied by src/app/opengraph-image.tsx, which Next generates
+    // at build time. Do not hardcode a path here: the previous static path
+    // pointed at a file that was never added, so shares rendered a broken card.
   },
   twitter: {
     card: "summary_large_image",
     title,
     description,
-    images: [siteConfig.OG_IMAGE],
   },
   robots: {
     index: true,

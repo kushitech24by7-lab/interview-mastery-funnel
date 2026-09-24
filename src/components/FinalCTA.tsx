@@ -3,7 +3,7 @@
 import CheckoutButton from "./CheckoutButton";
 import { PRIMARY_FINAL_CTA } from "@/lib/variants";
 import { siteConfig } from "@/lib/site-config";
-import { pricing, displayPrices } from "@/lib/pricing";
+import { pricing, displayPrices, ctaLabels } from "@/lib/pricing";
 
 /**
  * Final emotional close (brief §51 + §52).
@@ -101,7 +101,8 @@ export default function FinalCTA() {
 
           <div className="mt-6 flex justify-center">
             <CheckoutButton
-              label={`Get Complete Interview Mastery — ${displayPrices.special}`}
+              label={ctaLabels.primary}
+                shortLabel={ctaLabels.short}
               location="final_cta"
               showTrustLine
               trustLineOnDark
