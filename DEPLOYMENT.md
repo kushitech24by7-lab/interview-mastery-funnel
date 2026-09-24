@@ -44,6 +44,33 @@ PRODUCT_DOWNLOAD_URL=https://drive.google.com/drive/folders/xxxxxxxxxxxxx
 ACCESS_TOKEN_SECRET=<64-char random hex>
 ```
 
+### Email delivery (Resend) — required for fulfilment
+
+The product is delivered **by email**, so these three must be set in
+**Vercel → Project → Settings → Environment Variables** or nothing reaches buyers:
+
+| Variable | Secret? | Notes |
+| --- | --- | --- |
+| `RESEND_API_KEY` | **yes** | resend.com → API Keys. Server-only, no `NEXT_PUBLIC_`. |
+| `EMAIL_FROM` | no | e.g. `Interview Mastery <noreply@interviewmastery.shop>` |
+| `SUPPORT_EMAIL` | no | Defaults to `support@interviewmastery.shop`. |
+
+**DNS you must configure.** In Resend → Domains, add `interviewmastery.shop` and
+publish the SPF, DKIM and (recommended) DMARC records it gives you. Until the
+domain shows **Verified**, Resend only accepts sends to your own account
+address, so real buyers get nothing. Delivery emails from an unverified or
+SPF/DKIM-less domain also land in spam, which for a digital product is
+indistinguishable from not delivering at all.
+
+**Payments still work without any of this** — the site never blocks a sale on a
+mail failure — but the buyer receives no product and the failure is logged as
+`[fulfilment] DELIVERY FAILED`. Watch for that string.
+
+**Google Drive sharing.** The folder in `PRODUCT_DOWNLOAD_URL` must be shared so
+that recipients of the emailed link can open it — normally **Anyone with the
+link → Viewer**. The code does not and cannot change your Drive permissions. If
+the folder stays restricted, buyers receive a link that shows "Request access".
+
 ### Meta Pixel on Vercel
 
 The pixel id is **public** by design (Meta requires it in the browser) and lives in

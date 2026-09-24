@@ -87,7 +87,12 @@ export default async function SuccessPage({ searchParams }: Props) {
           </div>
 
           {/* Client island: access fetch, delivery steps, interview-timing router, Purchase pixel */}
-          <SuccessClient orderId={payload.orderId} paymentId={payload.paymentId} />
+          <SuccessClient
+            orderId={payload.orderId}
+            paymentId={payload.paymentId}
+            delivered={payload.delivered}
+            customerEmail={payload.email}
+          />
 
           <p className="mt-10 text-center text-fluid-sm text-ink-soft">
             <Link href="/" className="font-semibold text-teal-700 underline">

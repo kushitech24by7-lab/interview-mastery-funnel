@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { siteConfig, isPlaceholder, supportMailto } from "@/lib/site-config";
 import { track, getAttribution, trackInitiateCheckout } from "@/lib/analytics";
+import ContactModal, { type ContactDetails } from "./ContactModal";
 
 /**
  * Client half of the Razorpay flow (brief §33, steps 1–9).
@@ -94,6 +95,13 @@ export default function CheckoutButton({
   const inFlight = useRef(false);
   /** "test" once the server reports a test-mode key, so the UI can say so. */
   const [mode, setMode] = useState<string | null>(null);
+  /**
+   * The contact modal now stands between the CTA and Razorpay. The product is
+   * delivered by email, so the address must be captured and validated before
+   * an order exists — there is no database to attach it to afterwards.
+   */
+  const [contactOpen, setContactOpen] = useState(false);
+  const [contactError, setContactError] = useState<string | null>(null);
 
   useEffect(() => {
     mounted.current = true;
@@ -102,15 +110,29 @@ export default function CheckoutButton({
     };
   }, []);
 
-  const handleClick = useCallback(async () => {
-    // Drop the click if a checkout attempt is already running (see `inFlight`).
+  /**
+   * The CTA now opens the contact modal rather than starting checkout.
+   *
+   * No InitiateCheckout here: opening a form is not starting a checkout, and
+   * counting it as one would inflate the funnel with people who never paid.
+   * It fires later, once a Razorpay order exists and the modal is about to
+   * open (see `startCheckout`).
+   */
+  const handleClick = useCallback(() => {
+    if (inFlight.current) return;
+    setError(null);
+    setContactError(null);
+    track("PricingCTA_Click", { location });
+    setContactOpen(true);
+  }, [location]);
+
+  const startCheckout = useCallback(async (contact: ContactDetails) => {
+    // Drop the submit if a checkout attempt is already running (see `inFlight`).
     if (inFlight.current) return;
     inFlight.current = true;
 
     setError(null);
-    track("PricingCTA_Click", { location });
-    // InitiateCheckout is NOT fired here. It fires below, once the Razorpay
-    // order actually exists — see the call before razorpay.open().
+    setContactError(null);
 
     // Pre-launch guard: without a configured key, explain rather than fail silently.
     if (isPlaceholder(siteConfig.RAZORPAY_KEY_ID)) {
@@ -128,12 +150,35 @@ export default function CheckoutButton({
       const orderResponse = await fetch("/api/razorpay/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attribution: getAttribution() }),
+        /*
+         * Only the contact details and attribution are sent. Product, amount
+         * and currency are decided by the server — the browser never proposes
+         * a price, so devtools cannot buy the bundle for ₹1.
+         */
+        body: JSON.stringify({
+          email: contact.email,
+          phone: contact.phone,
+          attribution: getAttribution(),
+        }),
       });
 
       // Parse defensively: a gateway/edge error can return HTML, and letting
       // .json() throw here would mask the real HTTP status in the logs.
       const orderData = await orderResponse.json().catch(() => null);
+
+      /*
+       * A rejected email/phone is the buyer's to fix, so it belongs inside the
+       * modal next to the fields — not as a page-level error behind a closed
+       * dialog. The modal stays open and shows the server's message.
+       */
+      if (orderResponse.status === 400 && orderData?.field) {
+        inFlight.current = false;
+        if (mounted.current) {
+          setStatus("idle");
+          setContactError(orderData.message || "Please check your details and try again.");
+        }
+        return;
+      }
 
       if (!orderResponse.ok) {
         console.error("[checkout] create-order failed", {
@@ -195,6 +240,16 @@ export default function CheckoutButton({
         image: "/covers/brand-mark.png",
         theme: { color: "#1d2f4f" },
         notes: { product: "complete-interview-mastery" },
+        /*
+         * Prefilled from the values the buyer just gave us, already normalised
+         * (phone as +91XXXXXXXXXX). Saves re-typing on a phone keypad at the
+         * highest-abandonment moment in the flow, and keeps the contact shown
+         * in Razorpay consistent with the one recorded on the order.
+         */
+        prefill: {
+          email: contact.email,
+          contact: contact.phone,
+        },
 
         handler: async (response: {
           razorpay_order_id: string;
@@ -294,10 +349,13 @@ export default function CheckoutButton({
        */
       trackInitiateCheckout({ orderId: orderData.orderId, location });
       track("RazorpayOpened", { location });
+      // Close our dialog only now, so the buyer never sees a gap between the
+      // form disappearing and Razorpay appearing.
+      if (mounted.current) setContactOpen(false);
       razorpay.open();
       if (mounted.current) setStatus("idle");
     } catch (err) {
-      // Script load or order creation failed; no modal is open, so release.
+      // Script load or order creation failed; no Razorpay window is open, so release.
       inFlight.current = false;
       // Always log the underlying cause. A bare catch that only sets a friendly
       // string makes production failures undiagnosable — which is exactly how
@@ -307,6 +365,9 @@ export default function CheckoutButton({
       track("PaymentFailure", { location, reason: "checkout_init_error" });
       if (mounted.current) {
         setStatus("error");
+        // The modal is still open at this point, so the message has to go
+        // inside it — a page-level error would be hidden behind the dialog.
+        setContactError(message);
         setError(message);
       }
     }
@@ -317,6 +378,18 @@ export default function CheckoutButton({
 
   return (
     <div className={fullWidth ? "w-full" : ""}>
+      <ContactModal
+        open={contactOpen}
+        submitting={busy}
+        serverError={contactError}
+        onClose={() => {
+          if (busy) return;
+          setContactOpen(false);
+          setContactError(null);
+        }}
+        onSubmit={startCheckout}
+      />
+
       <button
         type="button"
         onClick={handleClick}

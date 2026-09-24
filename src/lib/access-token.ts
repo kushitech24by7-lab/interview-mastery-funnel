@@ -20,6 +20,17 @@ import { serverConfig, ACCESS_TOKEN_TTL_SECONDS } from "./server-config";
 export interface AccessTokenPayload {
   orderId: string;
   paymentId: string;
+  /**
+   * The buyer's address, as recorded on the verified Razorpay order, and
+   * whether the delivery email was accepted.
+   *
+   * These ride inside the SIGNED token rather than the URL so the success page
+   * can show "sent to you@example.com" without trusting a query string. Editing
+   * either value invalidates the HMAC, so the page cannot be made to claim a
+   * delivery that did not happen, or name an address that was never used.
+   */
+  email?: string;
+  delivered?: boolean;
   /** Issued-at, epoch seconds. */
   iat: number;
   /** Expiry, epoch seconds. */
@@ -45,11 +56,17 @@ function sign(data: string): string {
   );
 }
 
-export function createAccessToken(orderId: string, paymentId: string): string {
+export function createAccessToken(
+  orderId: string,
+  paymentId: string,
+  extra?: { email?: string; delivered?: boolean }
+): string {
   const now = Math.floor(Date.now() / 1000);
   const payload: AccessTokenPayload = {
     orderId,
     paymentId,
+    ...(extra?.email ? { email: extra.email } : {}),
+    ...(extra?.delivered !== undefined ? { delivered: extra.delivered } : {}),
     iat: now,
     exp: now + ACCESS_TOKEN_TTL_SECONDS,
   };

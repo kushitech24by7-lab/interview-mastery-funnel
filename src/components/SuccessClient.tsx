@@ -9,8 +9,11 @@ import { track, trackVerifiedPurchase } from "@/lib/analytics";
  *
  *  • Fires the Purchase pixel — this is the ONLY place it fires, and only after
  *    the server has already verified the signature to render this page.
- *  • Fetches the Google Drive link from /api/access, which re-validates the
- *    signed token server-side. The URL is never embedded in the page source.
+ *  • Shows WHERE the product was emailed, and never the Drive link itself.
+ *    Delivery moved to email, so the link exists only in the message sent to
+ *    the verified buyer — not in this page's HTML, its JS bundle or a query
+ *    string. (/api/access still exists, cookie-gated, as a support fallback;
+ *    this component no longer calls it.)
  *  • Routes the buyer to the right starting point based on when their interview
  *    is, which turns a receipt into something immediately useful.
  */
@@ -18,6 +21,14 @@ import { track, trackVerifiedPurchase } from "@/lib/analytics";
 interface Props {
   orderId: string;
   paymentId: string;
+  /** Whether the provider accepted the delivery email. Server-decided. */
+  delivered?: boolean;
+  /**
+   * The recipient, as recorded on the verified Razorpay order. Comes from the
+   * server, never from the URL — so it cannot be spoofed by editing the query
+   * string to make the page claim delivery to another address.
+   */
+  customerEmail?: string;
 }
 
 type TimingKey = "week" | "tomorrow" | "today" | "none";
@@ -69,10 +80,7 @@ const timings: { key: TimingKey; label: string; heading: string; steps: string[]
   },
 ];
 
-export default function SuccessClient({ orderId, paymentId }: Props) {
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
-  const [errorMessage, setErrorMessage] = useState<string>("");
+export default function SuccessClient({ orderId, paymentId, delivered = false, customerEmail }: Props) {
   const [timing, setTiming] = useState<TimingKey | null>(null);
 
   // Purchase pixel — verified path only.
@@ -82,33 +90,6 @@ export default function SuccessClient({ orderId, paymentId }: Props) {
     track("PaymentSuccess", { orderId });
   }, [orderId, paymentId]);
 
-  // Fetch the delivery link against the signed token.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const response = await fetch("/api/access", { credentials: "include" });
-        const data = await response.json();
-        if (cancelled) return;
-        if (response.ok && data.downloadUrl) {
-          setDownloadUrl(data.downloadUrl);
-          setState("ready");
-        } else {
-          setState("error");
-          setErrorMessage(data?.message || "We could not load your bundle link.");
-        }
-      } catch {
-        if (!cancelled) {
-          setState("error");
-          setErrorMessage("We could not reach the server to load your bundle link.");
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   const supportHref = isPlaceholder(siteConfig.SUPPORT_EMAIL)
     ? null
     : `mailto:${siteConfig.SUPPORT_EMAIL}?subject=${encodeURIComponent(
@@ -117,76 +98,47 @@ export default function SuccessClient({ orderId, paymentId }: Props) {
 
   return (
     <div className="mt-6 space-y-6">
-      {/* ── Access card ── */}
+      {/* ── Delivery status card ── */}
       <div className="card p-6 sm:p-8">
-        <h2 className="text-fluid-xl font-bold text-navy-950">Your bundle</h2>
+        <h2 className="text-fluid-xl font-bold text-navy-950">Your access is on its way</h2>
 
-        {state === "loading" && (
-          <div className="mt-4 flex items-center gap-3 text-fluid-sm text-ink-soft" role="status">
-            <svg className="h-5 w-5 animate-spin text-teal-600" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" />
-            </svg>
-            Preparing your access link…
-          </div>
+        {/*
+          The Google Drive link is deliberately NOT rendered here. Delivery is
+          by email, so the link lives only in the message sent to the verified
+          buyer's address — never in this page's HTML, its JS bundle or a query
+          string, any of which would make it shareable by anyone who reached
+          this URL.
+        */}
+        {delivered ? (
+          <p className="mt-3 text-fluid-sm leading-relaxed text-ink-soft">
+            We have sent your {siteConfig.PRODUCT_NAME} access
+            {customerEmail ? " to " : "."}
+            {customerEmail && <strong className="text-navy-950">{customerEmail}</strong>}
+            {customerEmail && "."}
+          </p>
+        ) : (
+          <p className="mt-3 text-fluid-sm leading-relaxed text-ink-soft">
+            Your purchase is confirmed. We are sending your {siteConfig.PRODUCT_NAME} access
+            {customerEmail ? " to " : " to your email address"}
+            {customerEmail && <strong className="text-navy-950">{customerEmail}</strong>}
+            . If it has not arrived shortly, contact support and we will send it straight away.
+          </p>
         )}
 
-        {state === "ready" && downloadUrl && (
-          <>
-            <a
-              href={downloadUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => track("Access_Click", { orderId })}
-              className="btn-primary mt-4 w-full sm:w-auto"
-            >
-              Access Complete Interview Mastery
-              <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path d="M11 3h6v6h-2V6.4l-7.3 7.3-1.4-1.4L13.6 5H11V3zM5 5h3v2H6v7h7v-2h2v4H5V5z" />
-              </svg>
+        <p className="mt-4 rounded-lg bg-navy-50 p-3 text-fluid-sm text-ink-soft">
+          Please check your <strong className="text-navy-900">Inbox</strong>,{" "}
+          <strong className="text-navy-900">Promotions</strong> and{" "}
+          <strong className="text-navy-900">Spam</strong> folders. We recommend saving the email
+          for future access.
+        </p>
+
+        {supportHref && (
+          <p className="mt-4 text-fluid-sm text-ink-soft">
+            Need help?{" "}
+            <a href={supportHref} className="font-semibold text-teal-700 underline">
+              {siteConfig.SUPPORT_EMAIL}
             </a>
-
-            {/* Delivery steps (§34) */}
-            <ol className="mt-6 grid gap-3 sm:grid-cols-2">
-              {[
-                { n: 1, title: "Open the bundle", detail: "The link opens your Google Drive folder." },
-                { n: 2, title: "Save or download", detail: "Download the PDFs, or keep them in Drive for your phone." },
-                { n: 3, title: "Choose your path", detail: "Pick the plan that matches your interview timing below." },
-                { n: 4, title: "Start practising", detail: "Say your answers out loud — that is where it works." },
-              ].map((step) => (
-                <li key={step.n} className="flex gap-3 rounded-xl border border-navy-100 bg-sand p-4">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-navy-950 text-fluid-xs font-bold text-white">
-                    {step.n}
-                  </span>
-                  <div>
-                    <p className="text-fluid-sm font-semibold text-navy-950">{step.title}</p>
-                    <p className="mt-0.5 text-fluid-xs text-ink-soft">{step.detail}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-
-            <p className="mt-5 rounded-lg bg-navy-50 p-3 text-fluid-xs text-ink-soft">
-              <strong className="text-navy-900">Tip:</strong> bookmark this page or save the Drive
-              link now. Your access link on this page stays valid for 7 days.
-            </p>
-          </>
-        )}
-
-        {state === "error" && (
-          <div role="alert" className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-4">
-            <p className="text-fluid-sm font-semibold text-amber-900">{errorMessage}</p>
-            <p className="mt-1.5 text-fluid-sm text-amber-900">
-              Your payment has been received and recorded. Please contact support with your payment
-              ID and we will send your bundle link directly.
-            </p>
-            <p className="mt-2 font-mono text-fluid-xs text-amber-900">Payment ID: {paymentId}</p>
-            {supportHref && (
-              <a href={supportHref} className="btn-secondary mt-3">
-                Contact support
-              </a>
-            )}
-          </div>
+          </p>
         )}
       </div>
 

@@ -4,6 +4,12 @@ import { cookies } from "next/headers";
 import { serverConfig, ACCESS_COOKIE, ACCESS_TOKEN_TTL_SECONDS } from "@/lib/server-config";
 import { store, STORE_IS_EPHEMERAL } from "@/lib/order-store";
 import { createAccessToken } from "@/lib/access-token";
+import {
+  customerFromOrder,
+  fulfilOrder,
+  verifyPaymentWithRazorpay,
+} from "@/lib/fulfilment";
+import { maskEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -95,9 +101,60 @@ export async function POST(request: Request) {
       );
     }
 
+    /*
+     * SECOND CHECK, AGAINST RAZORPAY ITSELF.
+     *
+     * The HMAC above proves the callback really came from Razorpay. It does
+     * NOT prove the payment succeeded, that it belongs to this order, or that
+     * it was for the right amount. Fetching the payment server-side confirms
+     * all three before anything irreversible (delivering a digital product)
+     * happens. An "authorised but not captured" payment is a hold that can
+     * still be voided, so it does not qualify.
+     */
+    const gateway = await verifyPaymentWithRazorpay(orderId, paymentId);
+    if (!gateway.ok) {
+      console.error("[verify] gateway verification failed", {
+        orderId,
+        paymentId,
+        reason: gateway.reason,
+      });
+      await store.markFailed(orderId, gateway.reason || "gateway_verification_failed");
+      return NextResponse.json(
+        {
+          error: "verification_failed",
+          message:
+            "We could not confirm this payment with the payment gateway. If money has left your account, please contact support with your payment ID.",
+          paymentId,
+        },
+        { status: 400 }
+      );
+    }
+
     await store.markPaid(orderId, paymentId);
 
-    const token = createAccessToken(orderId, paymentId);
+    /*
+     * FULFILMENT.
+     *
+     * The recipient comes from the Razorpay ORDER, fetched server-side — never
+     * from this request body. If the browser could name the address after
+     * payment, anyone who learned an order id could redirect somebody else's
+     * purchase to their own inbox.
+     *
+     * Delivery is idempotent on the payment id, so a retried verify call, a
+     * webhook retry or a refreshed success page all collapse to one email.
+     */
+    const customer = await customerFromOrder(orderId);
+    const fulfilment = await fulfilOrder({
+      orderId,
+      paymentId,
+      customer,
+      source: "verify",
+    });
+
+    const token = createAccessToken(orderId, paymentId, {
+      email: fulfilment.customerEmail,
+      delivered: fulfilment.delivered,
+    });
 
     const cookieStore = await cookies();
     cookieStore.set(ACCESS_COOKIE, token, {
@@ -108,13 +165,31 @@ export async function POST(request: Request) {
       maxAge: ACCESS_TOKEN_TTL_SECONDS,
     });
 
+    console.info("[verify] payment verified", {
+      orderId,
+      paymentId,
+      delivered: fulfilment.delivered,
+      customer: fulfilment.customerEmail ? maskEmail(fulfilment.customerEmail) : "(unknown)",
+    });
+
     return NextResponse.json({
       verified: true,
       orderId,
       paymentId,
-      amount: record?.amount ?? serverConfig.pricePaise,
-      currency: record?.currency ?? serverConfig.currency,
-      // NOTE: no download URL here — see /api/access.
+      amount: gateway.amount ?? record?.amount ?? serverConfig.pricePaise,
+      currency: gateway.currency ?? record?.currency ?? serverConfig.currency,
+      /*
+       * Payment success and email success are DIFFERENT states. The payment is
+       * verified either way; `delivered` only tells the success screen whether
+       * to say "sent to X" or "we are still sending it". The buyer must never
+       * be told a verified payment failed because a mail provider blipped.
+       *
+       * The recipient is echoed so the success screen can show which inbox to
+       * check. It is the server's trusted value, not the browser's.
+       */
+      delivered: fulfilment.delivered,
+      customerEmail: fulfilment.customerEmail,
+      // NOTE: no download URL here — the product is delivered by email.
     });
   } catch (error) {
     console.error("[verify] error:", error);
