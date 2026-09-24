@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { siteConfig, isPlaceholder, supportMailto } from "@/lib/site-config";
-import { track, getAttribution } from "@/lib/analytics";
+import { track, getAttribution, trackInitiateCheckout } from "@/lib/analytics";
 
 /**
  * Client half of the Razorpay flow (brief §33, steps 1–9).
@@ -109,7 +109,8 @@ export default function CheckoutButton({
 
     setError(null);
     track("PricingCTA_Click", { location });
-    track("InitiateCheckout", { location });
+    // InitiateCheckout is NOT fired here. It fires below, once the Razorpay
+    // order actually exists — see the call before razorpay.open().
 
     // Pre-launch guard: without a configured key, explain rather than fail silently.
     if (isPlaceholder(siteConfig.RAZORPAY_KEY_ID)) {
@@ -283,6 +284,15 @@ export default function CheckoutButton({
         }
       });
 
+      /*
+       * InitiateCheckout fires HERE — the order exists, the SDK is loaded and
+       * the modal is about to open, so the event represents a checkout the
+       * customer genuinely reached. Firing it on click instead would also count
+       * attempts that died at order creation or a blocked SDK, overstating the
+       * top of the funnel and teaching Meta to optimise for clicks that never
+       * became checkouts.
+       */
+      trackInitiateCheckout({ orderId: orderData.orderId, location });
       track("RazorpayOpened", { location });
       razorpay.open();
       if (mounted.current) setStatus("idle");

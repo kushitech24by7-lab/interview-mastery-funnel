@@ -44,6 +44,18 @@ PRODUCT_DOWNLOAD_URL=https://drive.google.com/drive/folders/xxxxxxxxxxxxx
 ACCESS_TOKEN_SECRET=<64-char random hex>
 ```
 
+### Meta Pixel on Vercel
+
+The pixel id is **public** by design (Meta requires it in the browser) and lives in
+`site-config.ts` as `META_PIXEL_ID`. Replace `[META_PIXEL_ID]` with the 15-digit id
+from Events Manager; until then every Meta call is a no-op, so nothing throws and
+no events are sent.
+
+A Conversions API **access token would be a secret** — if you add CAPI later, set
+`META_CAPI_ACCESS_TOKEN` in Vercel → Settings → Environment Variables with **no**
+`NEXT_PUBLIC_` prefix, and never place it in `site-config.ts`, which is bundled
+into the browser.
+
 Generate the token secret:
 
 ```bash
@@ -246,8 +258,57 @@ Events: `PageView`, `ViewContent`, `HeroCTA_Click`, `BundleSection_View`,
 
 UTM parameters (`utm_*`, `fbclid`, `gclid`) are captured on landing, persisted for the
 session, attached to the Razorpay order notes, and included on every event — so attribution
-survives the checkout hop. `Purchase` is deduplicated by order ID, so refreshing the success
-page will not double-count.
+survives the checkout hop.
+
+### The Meta standard funnel
+
+| Event | Fires | Where |
+| --- | --- | --- |
+| `PageView` | once, on load | base pixel snippet in `layout.tsx` |
+| `ViewContent` | once per page view | `trackViewContent()` from `Hero.tsx` |
+| `InitiateCheckout` | after the order exists, as the modal opens | `trackInitiateCheckout()` in `CheckoutButton.tsx` |
+| `Purchase` | only after server-side signature verification | `trackVerifiedPurchase()` from `SuccessClient.tsx` |
+
+`ViewContent`, `InitiateCheckout` and `Purchase` all carry `content_name`,
+`content_ids`, `content_type`, `value` (699) and `currency` (INR); the latter two
+also carry `num_items: 1`.
+
+**Do not add a second `PageView`.** The base snippet already fires it and guards
+re-init with `if(f.fbq)return`.
+
+**`InitiateCheckout` deliberately does not fire on click.** It fires once the
+Razorpay order has been created and the SDK is loaded, immediately before
+`razorpay.open()`. Firing on click would count attempts that never reached
+Razorpay, teaching Meta to optimise for clicks rather than checkouts.
+
+**`Purchase` cannot fire from an unverified page.** `/thank-you` is a server
+component that verifies the signed access cookie before rendering; the order and
+payment ids come from the token payload, not the query string, so a crafted URL
+renders the "we couldn't confirm a purchase" state and never mounts the pixel.
+
+Duplicate purchases are blocked by three independent layers: a module-level
+`Set` (React Strict Mode / remounts), a `localStorage` key (reload, back/forward,
+restored tab) and Meta's own `eventID: orderId` deduplication.
+
+### Conversions API — not implemented
+
+There is **no** CAPI integration, and none is faked. The browser event is already
+structured for one: it sends `eventID: orderId`, the same stable id a server event
+would use, so Meta would deduplicate the pair automatically.
+
+To add it later you would need:
+
+1. `META_CAPI_ACCESS_TOKEN` — a **server-only** env var. It must never carry the
+   `NEXT_PUBLIC_` prefix, or it ships to the browser and can be used to write
+   events into your pixel.
+2. A server route (e.g. `POST /api/meta/capi`) called from the **verify** route,
+   after signature verification succeeds — not from the browser.
+3. The same `eventID` (the Razorpay order id) plus `action_source: "website"` and
+   `event_source_url`.
+4. Hashed customer data (SHA-256 email/phone) only if you collect it; do not send
+   raw PII.
+
+Until all four exist, the browser pixel alone is the honest implementation.
 
 ---
 

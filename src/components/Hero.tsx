@@ -6,7 +6,7 @@ import ProductCover from "./ProductCover";
 import { products } from "@/lib/products";
 import { siteConfig } from "@/lib/site-config";
 import { pricing, displayPrices, ctaLabels } from "@/lib/pricing";
-import { captureAttribution, track } from "@/lib/analytics";
+import { captureAttribution, track, trackViewContent } from "@/lib/analytics";
 import type { HeroVariant } from "@/lib/variants";
 
 /**
@@ -25,7 +25,10 @@ const SHOWCASE = ["p01", "p03", "p04", "p02", "p05"];
 export default function Hero({ variant }: Props) {
   useEffect(() => {
     captureAttribution();
-    track("ViewContent", { content_name: siteConfig.PRODUCT_NAME, variant: variant.key });
+    // Guarded inside the helper: one ViewContent per page view, even though this
+    // effect re-runs when the A/B variant changes and Strict Mode double-invokes
+    // it in development.
+    trackViewContent({ variant: variant.key });
   }, [variant.key]);
 
   const showcase = SHOWCASE.map((id) => products.find((p) => p.id === id)!).filter(Boolean);

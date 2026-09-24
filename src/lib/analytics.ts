@@ -159,6 +159,80 @@ export function track(event: FunnelEvent, params: Record<string, unknown> = {}):
 }
 
 /**
+ * ── META STANDARD-EVENT HELPERS ───────────────────────────────────────────────
+ *
+ * The funnel Meta expects is PageView → ViewContent → InitiateCheckout →
+ * Purchase. Each of the three below sends the product payload Meta needs to
+ * value the conversion, and each guards against firing twice.
+ *
+ * PageView is NOT here on purpose: the base pixel snippet in layout.tsx already
+ * fires it exactly once, and its `if(f.fbq)return` guard prevents re-init. A
+ * second manual PageView would double-count every session.
+ *
+ * All of these are safe when the pixel is blocked, unconfigured or still
+ * loading — `track()` no-ops rather than throwing.
+ */
+
+/** Shared product payload so the three events describe the same thing. */
+function productPayload(): Record<string, unknown> {
+  return {
+    content_name: siteConfig.PRODUCT_NAME,
+    content_ids: [PRODUCT_CONTENT_ID],
+    content_type: "product",
+    value: purchaseValue(),
+    currency: siteConfig.CURRENCY,
+  };
+}
+
+const PRODUCT_CONTENT_ID = "complete-interview-mastery";
+
+/** Rupee value of one purchase, derived from the single price source. */
+function purchaseValue(): number {
+  return siteConfig.PRICE_IN_PAISE > 0 ? siteConfig.PRICE_IN_PAISE / 100 : 0;
+}
+
+/**
+ * Module-level guard for ViewContent.
+ *
+ * React 18 Strict Mode mounts effects twice in development, and the hero
+ * remounts whenever the A/B variant changes. Both would send a second
+ * ViewContent for what is really one product-page view. A module-level flag
+ * survives remounts within the page lifetime; a ref or state would not.
+ */
+let viewContentSent = false;
+
+/** Order ids already reported in this page lifetime (Strict Mode guard). */
+const purchasesSent = new Set<string>();
+
+/** Fire once per page view, when the visitor genuinely sees the product page. */
+export function trackViewContent(extra: Record<string, unknown> = {}): void {
+  if (typeof window === "undefined" || viewContentSent) return;
+  viewContentSent = true;
+  track("ViewContent", { ...productPayload(), ...extra });
+}
+
+/**
+ * Fire when the customer actually starts checkout.
+ *
+ * Call this AFTER the Razorpay order has been created and immediately before
+ * the modal opens — not on click. Firing on click would also count clicks that
+ * never reach Razorpay because order creation failed or payments are
+ * misconfigured, which inflates the funnel exactly where it should be honest.
+ */
+export function trackInitiateCheckout(args: {
+  orderId: string;
+  location: string;
+}): void {
+  if (typeof window === "undefined") return;
+  track("InitiateCheckout", {
+    ...productPayload(),
+    num_items: 1,
+    order_id: args.orderId,
+    location: args.location,
+  });
+}
+
+/**
  * Purchase — call ONLY after server-side signature verification.
  * `orderId` is used as the Meta deduplication key so a page refresh on the
  * success page does not double-count the conversion.
@@ -171,20 +245,40 @@ export function trackVerifiedPurchase(args: {
 }): void {
   if (typeof window === "undefined") return;
 
-  const dedupeKey = `ml_purchase_tracked_${args.orderId}`;
+  /*
+   * DUPLICATE-PURCHASE PREVENTION — three independent layers, because a
+   * double-counted Purchase corrupts ad optimisation and ROAS reporting:
+   *
+   *  1. `purchasesSent` (module memory) stops React Strict Mode's double effect
+   *     invocation and any remount inside the same page load. sessionStorage
+   *     alone does NOT stop this reliably: both invocations can read the key
+   *     before either writes it.
+   *  2. localStorage survives reload, back/forward navigation and tab restore
+   *     for the same browser — the realistic ways a buyer revisits a success
+   *     page. sessionStorage would miss a reopened tab.
+   *  3. `eventID: orderId` lets Meta itself discard a duplicate, including one
+   *     arriving from the Conversions API, since the order id is stable and
+   *     unique per transaction.
+   */
+  if (purchasesSent.has(args.orderId)) return;
+  purchasesSent.add(args.orderId);
+
+  const dedupeKey = `im_purchase_tracked_${args.orderId}`;
   try {
-    if (sessionStorage.getItem(dedupeKey)) return;
-    sessionStorage.setItem(dedupeKey, "1");
+    if (localStorage.getItem(dedupeKey)) return;
+    localStorage.setItem(dedupeKey, String(Date.now()));
   } catch {
-    /* proceed without dedupe if storage is unavailable */
+    /* private mode — layers 1 and 3 still apply */
   }
 
   const payload = {
-    content_name: siteConfig.PRODUCT_NAME,
-    content_ids: ["complete-interview-mastery"],
-    content_type: "product",
+    ...productPayload(),
+    // Server-verified figures win over the shared defaults.
     value: args.value,
     currency: args.currency,
+    num_items: 1,
+    order_id: args.orderId,
+    payment_id: args.paymentId,
     ...getAttribution(),
   };
 

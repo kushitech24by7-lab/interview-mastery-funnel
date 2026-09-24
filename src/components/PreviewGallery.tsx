@@ -9,46 +9,127 @@ import { siteConfig } from "@/lib/site-config";
  * Real product preview gallery (brief §28 + §55).
  *
  * ── THE HONESTY RULE, ENFORCED IN CODE ────────────────────────────────────────
- * Every item here must be an ACTUAL page exported from an ACTUAL PDF. Until
- * those files exist in /public/previews, this component renders an explicit
- * "previews coming" state rather than mock page images. There is deliberately
- * NO fallback that draws a fake page: a fabricated screenshot would be the one
- * thing most likely to make a real buyer feel deceived on delivery.
+ * Every image here is an ACTUAL page rendered from the ACTUAL shipped PDF, at
+ * the page number recorded in `sourcePage`. Nothing is redrawn, retouched or
+ * mocked up. If a page is ever replaced, re-export it from the same source file
+ * rather than editing the image.
  *
- * ── HOW TO ADD THE REAL PREVIEWS ──────────────────────────────────────────────
- * 1. Export the pages listed below as JPG/WebP, ~1200px wide, lightly compressed.
- * 2. Save them to /public/previews/ using the `src` filenames below.
- * 3. Set `available: true` on each item you have added.
+ * ── WHY TWO IMAGE SIZES ───────────────────────────────────────────────────────
+ * The grid loads `thumb` (~520px, lazy) and the lightbox loads the full-width
+ * render only when a card is opened. Loading ten full pages up front would cost
+ * ~900KB on a phone for a section most visitors only scroll past.
  *
- * Show enough to prove quality; do not publish full-resolution complete pages
- * of the paid material.
+ * ── WHAT IS DELIBERATELY NOT HERE ─────────────────────────────────────────────
+ * No PDF is linked, embedded or fetched by this component, so the preview
+ * cannot be used to obtain the paid material. Only these ten selected page
+ * images exist under /public/previews.
+ *
+ * P03 and P04 still carry the retired "Mastery Library" brand in their running
+ * header, so those two renders are clipped below the header band: real content,
+ * without showing customers a brand name the site no longer uses. Re-exporting
+ * those two PDFs under the current brand would let the clip be removed.
  */
 
 interface PreviewItem {
   id: string;
+  /** Full-size render, loaded only when the lightbox opens. */
   src: string;
+  /** Small render used in the grid. */
+  thumb: string;
+  /** Resource code and title, as the buyer will see them in the bundle. */
   product: string;
+  /** Page number in the source PDF — keeps every image traceable. */
+  sourcePage: number;
+  /** What this page lets the buyer DO, not what it is called. */
   caption: string;
-  /** Flip to true once the real exported page is in /public/previews. */
-  available: boolean;
 }
 
 const previews: PreviewItem[] = [
-  { id: "p03-frameworks", src: "/previews/p03-framework-library.jpg", product: "P03", caption: "The answer framework library", available: false },
-  { id: "p03-evidence", src: "/previews/p03-evidence-bank.jpg", product: "P03", caption: "12-story evidence bank", available: false },
-  { id: "p04-star", src: "/previews/p04-star-example.jpg", product: "P04", caption: "A worked STAR+ example", available: false },
-  { id: "p02-clarity", src: "/previews/p02-clarity.jpg", product: "P02", caption: "The clarity hierarchy", available: false },
-  { id: "p05-ppf", src: "/previews/p05-present-past-future.jpg", product: "P05", caption: "Present–Past–Future in practice", available: false },
-  { id: "p06-recovery", src: "/previews/p06-recovery-framework.jpg", product: "P06", caption: "Fact → Context → Ownership → Action → Readiness", available: false },
-  { id: "p08-scoring", src: "/previews/p08-scoring-rubric.jpg", product: "P08", caption: "The mock interview scoring rubric", available: false },
-  { id: "p09-research", src: "/previews/p09-45-minute-system.jpg", product: "P09", caption: "45-minute company research system", available: false },
-  { id: "p10-worksheet", src: "/previews/p10-star-builder.jpg", product: "P10", caption: "STAR story builder worksheet", available: false },
-  { id: "p12-card", src: "/previews/p12-final-revision-card.jpg", product: "P12", caption: "Final 10-Minute Revision Card", available: false },
+  {
+    id: "p03-question-bank",
+    src: "/previews/p03-question-bank.webp",
+    thumb: "/previews/p03-question-bank-thumb.webp",
+    product: "P03 — 500 Interview Questions",
+    sourcePage: 7,
+    caption: "Each question shows what is being tested, the framework to use, and what to avoid",
+  },
+  {
+    id: "p04-star-example",
+    src: "/previews/p04-star-example.webp",
+    thumb: "/previews/p04-star-example-thumb.webp",
+    product: "P04 — 100 STAR Answer Examples",
+    sourcePage: 6,
+    caption: "Worked STAR answers with competencies, reflection and how to adapt the story",
+  },
+  {
+    id: "p05-tmay-example",
+    src: "/previews/p05-tmay-example.webp",
+    thumb: "/previews/p05-tmay-example-thumb.webp",
+    product: "P05 — Tell Me About Yourself",
+    sourcePage: 18,
+    caption: "Annotated example answers you can model your own introduction on",
+  },
+  {
+    id: "p06-difficult",
+    src: "/previews/p06-difficult.webp",
+    thumb: "/previews/p06-difficult-thumb.webp",
+    product: "P06 — Difficult Questions Guide",
+    sourcePage: 6,
+    caption: "How to answer the questions candidates most often get wrong",
+  },
+  {
+    id: "p08-scoring-rubric",
+    src: "/previews/p08-scoring-rubric.webp",
+    thumb: "/previews/p08-scoring-rubric-thumb.webp",
+    product: "P08 — Mock Interview Workbook",
+    sourcePage: 7,
+    caption: "The scoring rubric that turns practice into something you can measure",
+  },
+  {
+    id: "p09-research-system",
+    src: "/previews/p09-research-system.webp",
+    thumb: "/previews/p09-research-system-thumb.webp",
+    product: "P09 — Company Research Workbook",
+    sourcePage: 4,
+    caption: "Turn 45 minutes of company research into answers you can actually use",
+  },
+  {
+    id: "p10-answer-builder",
+    src: "/previews/p10-answer-builder.webp",
+    thumb: "/previews/p10-answer-builder-thumb.webp",
+    product: "P10 — Answer Builder Worksheets",
+    sourcePage: 6,
+    caption: "Build your own answers from your own experience, step by step",
+  },
+  {
+    id: "p07-salary",
+    src: "/previews/p07-salary.webp",
+    thumb: "/previews/p07-salary-thumb.webp",
+    product: "P07 — Salary Negotiation Guide",
+    sourcePage: 6,
+    caption: "Prepare the compensation conversation before you are put on the spot",
+  },
+  {
+    id: "p11-interview-day",
+    src: "/previews/p11-interview-day.webp",
+    thumb: "/previews/p11-interview-day-thumb.webp",
+    product: "P11 — Interview Day Toolkit",
+    sourcePage: 6,
+    caption: "The final-hour sequence for the morning of the interview",
+  },
+  {
+    id: "p12-master-checklist",
+    src: "/previews/p12-master-checklist.webp",
+    thumb: "/previews/p12-master-checklist-thumb.webp",
+    product: "P12 — Templates & Checklists",
+    sourcePage: 4,
+    caption: "The master preparation checklist covering role, company, self and practice",
+  },
 ];
 
 export default function PreviewGallery() {
   const [lightbox, setLightbox] = useState<PreviewItem | null>(null);
-  const live = previews.filter((p) => p.available);
+  const live = previews;
 
   const close = useCallback(() => setLightbox(null), []);
 
@@ -72,15 +153,16 @@ export default function PreviewGallery() {
           <p className="eyebrow">Look inside</p>
           <h2 className="h2 mt-3">See the actual pages before you buy.</h2>
           <p className="lede mx-auto mt-4">
-            These are real pages from the resources you receive — not marketing mock-ups.
+            Preview selected pages from the resources included in {siteConfig.PRODUCT_NAME}.
+            These are real pages from the files you receive — not marketing mock-ups.
           </p>
         </div>
 
         {live.length > 0 ? (
           <>
-            <ul className="swipe-rail mt-10 lg:grid lg:grid-cols-5 lg:gap-4 lg:overflow-visible">
+            <ul className="swipe-rail mt-10 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible lg:grid-cols-5">
               {live.map((item) => (
-                <li key={item.id} className="w-[13rem] lg:w-auto">
+                <li key={item.id} className="w-[13rem] sm:w-auto">
                   <button
                     type="button"
                     onClick={() => {
@@ -88,14 +170,14 @@ export default function PreviewGallery() {
                       track("ProductPreview_Open", { preview: item.id, product: item.product });
                     }}
                     className="group w-full text-left"
-                    aria-label={`Enlarge preview: ${item.caption} from ${item.product}`}
+                    aria-label={`Enlarge page ${item.sourcePage} of ${item.product}`}
                   >
                     <span className="relative block aspect-[1/1.414] overflow-hidden rounded-lg border border-navy-200 bg-sand shadow-card transition-shadow group-hover:shadow-lift">
                       <Image
-                        src={item.src}
-                        alt={`${item.caption} — page from ${item.product}`}
+                        src={item.thumb}
+                        alt={`${item.product}, page ${item.sourcePage}: ${item.caption}`}
                         fill
-                        sizes="(max-width: 1024px) 208px, 220px"
+                        sizes="(max-width: 640px) 208px, (max-width: 1024px) 30vw, 220px"
                         loading="lazy"
                         className="object-cover object-top"
                       />
@@ -114,12 +196,11 @@ export default function PreviewGallery() {
               ))}
             </ul>
             <p className="mt-4 text-center text-fluid-xs text-ink-faint">
-              Tap any page to enlarge.
+              Tap any page to enlarge. Showing {live.length} selected pages of{" "}
+              {siteConfig.TOTAL_PAGES} across all {siteConfig.TOTAL_PRODUCTS} resources.
             </p>
           </>
-        ) : (
-          <PreviewPlaceholder />
-        )}
+        ) : null}
       </div>
 
       {/* Lightbox */}
@@ -145,47 +226,20 @@ export default function PreviewGallery() {
           >
             <Image
               src={lightbox.src}
-              alt={`${lightbox.caption} — page from ${lightbox.product}`}
+              alt={`${lightbox.product}, page ${lightbox.sourcePage}: ${lightbox.caption}`}
               width={1200}
               height={1697}
               className="h-auto max-h-[85vh] w-full rounded-lg object-contain"
             />
             <p className="mt-3 text-center text-fluid-sm text-white">
-              <span className="font-bold">{lightbox.product}</span> · {lightbox.caption}
+              <span className="font-bold">{lightbox.product}</span> · page {lightbox.sourcePage}
+              <br />
+              {lightbox.caption}
             </p>
           </div>
         </div>
       )}
     </section>
-  );
-}
-
-/**
- * Shown while real page exports are not yet in place. States the situation
- * plainly instead of substituting invented imagery.
- */
-function PreviewPlaceholder() {
-  /*
-   * MAINTAINER NOTE — never render build instructions here.
-   * A previous version printed "Developer note: add the exported pages to
-   * /public/previews…" to every visitor, which reads as an unfinished site at
-   * the exact moment the buyer is deciding whether to trust it. Setup steps
-   * belong in comments and DEPLOYMENT.md, never in customer-facing JSX.
-   *
-   * To publish previews: export pages to /public/previews using the `src`
-   * filenames in the `previews` array above, then set `available: true`.
-   */
-  return (
-    <div className="mx-auto mt-10 max-w-2xl rounded-xl2 border border-navy-200 bg-sand p-8 text-center">
-      <p className="text-fluid-base font-semibold text-navy-950">
-        Sample pages are being prepared.
-      </p>
-      <p className="mx-auto mt-2 max-w-md text-fluid-sm text-ink-soft">
-        We only publish real pages taken from the actual resources, so this section stays empty
-        until those are ready. The full contents of all {siteConfig.TOTAL_PRODUCTS} resources are
-        listed above.
-      </p>
-    </div>
   );
 }
 
