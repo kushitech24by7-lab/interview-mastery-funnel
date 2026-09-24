@@ -116,10 +116,29 @@ stop summing to ₹5,688 / ₹2,608 or if the savings figure stops being ₹1,80
 1. Dashboard → **Settings → API Keys** → generate keys. Use `rzp_test_*` until you have
    tested a full purchase.
 2. Dashboard → **Settings → Webhooks** → add:
-   - URL: `https://your-domain.com/api/razorpay/webhook`
+   - URL: `https://interviewmastery.shop/api/razorpay/webhook`
    - Events: `payment.captured`, `payment.failed`
    - Secret: the same value as `RAZORPAY_WEBHOOK_SECRET`
 3. Complete KYC before switching to live keys.
+
+> **The path must end in `/webhook`.** A URL of `…/api/razorpay/` (no final
+> segment) answers **308 Redirect**, which Razorpay counts as a failed delivery
+> and retries into nothing — the handler never runs. This has already happened
+> once on this account. After saving, confirm with:
+>
+> ```
+> curl -s -o /dev/null -w '%{http_code}
+' -X POST >   https://interviewmastery.shop/api/razorpay/webhook -d '{}'
+> ```
+>
+> **400** is correct — the route is live and rejecting an unsigned request.
+> **308** means the URL is wrong. **503** means `RAZORPAY_WEBHOOK_SECRET` is
+> unset on the deployment.
+>
+> To change the URL, **edit the existing webhook rather than creating a new
+> one** — a new webhook issues a new secret that must then be updated in the
+> hosting environment. Note there is no merchant API for this: Razorpay's
+> update-webhook endpoint is a Partner API, so the dashboard is the only route.
 
 ### Why the webhook matters
 

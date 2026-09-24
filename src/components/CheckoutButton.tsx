@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { siteConfig, isPlaceholder, supportMailto } from "@/lib/site-config";
 import { track, getAttribution } from "@/lib/analytics";
 
@@ -29,6 +30,15 @@ interface Props {
   className?: string;
   location: string;
   fullWidth?: boolean;
+  /**
+   * Shows the "Secure payment • Digital delivery • Refund • Privacy" line.
+   * Opt-in: this button appears ~9 times on the page, and repeating the trust
+   * line under every one would be clutter rather than reassurance. Enable it
+   * at the points where someone is actually deciding to pay.
+   */
+  showTrustLine?: boolean;
+  /** Set on dark (navy) backgrounds so the trust line stays legible. */
+  trustLineOnDark?: boolean;
 }
 
 const RAZORPAY_SCRIPT = "https://checkout.razorpay.com/v1/checkout.js";
@@ -59,6 +69,8 @@ export default function CheckoutButton({
   className = "",
   location,
   fullWidth = false,
+  showTrustLine = false,
+  trustLineOnDark = false,
 }: Props) {
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -105,6 +117,49 @@ export default function CheckoutButton({
     setStatus("loading");
 
     try {
+      const orderResponse = await fetch("/api/razorpay/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ attribution: getAttribution() }),
+      });
+
+      // Parse defensively: a gateway/edge error can return HTML, and letting
+      // .json() throw here would mask the real HTTP status in the logs.
+      const orderData = await orderResponse.json().catch(() => null);
+
+      if (!orderResponse.ok) {
+        console.error("[checkout] create-order failed", {
+          status: orderResponse.status,
+          error: orderData?.error,
+          code: orderData?.code,
+        });
+        throw new Error(
+          orderData?.message ||
+            `We could not start the payment (error ${orderResponse.status}). Please try again.`
+        );
+      }
+
+      // Validate the order before handing it to Razorpay. Without this, a
+      // malformed response surfaces as an opaque failure inside Razorpay's
+      // iframe instead of a diagnosable error on our side.
+      if (!orderData?.orderId || !String(orderData.orderId).startsWith("order_")) {
+        throw new Error("The payment gateway returned an invalid order reference.");
+      }
+      if (!Number.isInteger(orderData.amount) || orderData.amount < 100) {
+        throw new Error("The payment gateway returned an invalid amount.");
+      }
+      if (!orderData?.keyId || !String(orderData.keyId).startsWith("rzp_")) {
+        throw new Error("The payment gateway returned an invalid key.");
+      }
+      if (!orderData?.currency) {
+        throw new Error("The payment gateway returned no currency.");
+      }
+
+      if (orderData.mode) setMode(orderData.mode);
+
+      // Only now load the SDK. Loading it before the order exists would mean a
+      // failed order creation had already paid the cost of a third-party
+      // script, and would open a window on state we do not yet have.
       const scriptOk = await loadRazorpayScript();
       if (!scriptOk) {
         throw new Error(
@@ -112,18 +167,15 @@ export default function CheckoutButton({
         );
       }
 
-      const orderResponse = await fetch("/api/razorpay/create-order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attribution: getAttribution() }),
-      });
-
-      const orderData = await orderResponse.json();
-      if (!orderResponse.ok) {
-        throw new Error(orderData?.message || "We could not start the payment. Please try again.");
+      // Step 7: confirm the SDK constructor is genuinely present. A script can
+      // fire onload while a proxy/extension has served a body that never
+      // defines window.Razorpay; the non-null assertion below would then throw
+      // an unhelpful TypeError instead of a clear message.
+      if (typeof window.Razorpay !== "function") {
+        throw new Error(
+          "The secure payment window did not initialise. Please disable any ad blocker for this site and try again."
+        );
       }
-
-      if (orderData.mode) setMode(orderData.mode);
 
       const razorpay = new window.Razorpay!({
         key: orderData.keyId,
@@ -194,7 +246,23 @@ export default function CheckoutButton({
       });
 
       razorpay.on("payment.failed", (resp: unknown) => {
-        const failure = resp as { error?: { description?: string; metadata?: { payment_id?: string } } };
+        const failure = resp as {
+          error?: {
+            code?: string;
+            description?: string;
+            source?: string;
+            step?: string;
+            reason?: string;
+          };
+        };
+        // Diagnostic fields only — never card, UPI or contact details.
+        console.error("[checkout] Razorpay payment failed", {
+          code: failure?.error?.code,
+          description: failure?.error?.description,
+          source: failure?.error?.source,
+          step: failure?.error?.step,
+          reason: failure?.error?.reason,
+        });
         // Card declined / UPI timeout etc. Release so the buyer can try another method.
         inFlight.current = false;
         track("PaymentFailure", { location, reason: failure?.error?.description || "payment_failed" });
@@ -214,6 +282,10 @@ export default function CheckoutButton({
     } catch (err) {
       // Script load or order creation failed; no modal is open, so release.
       inFlight.current = false;
+      // Always log the underlying cause. A bare catch that only sets a friendly
+      // string makes production failures undiagnosable — which is exactly how
+      // the misconfiguration behind this bug stayed hidden.
+      console.error("[checkout] Payment initialization failed:", err);
       const message = err instanceof Error ? err.message : "Something went wrong. Please try again.";
       track("PaymentFailure", { location, reason: "checkout_init_error" });
       if (mounted.current) {
@@ -247,6 +319,36 @@ export default function CheckoutButton({
           </>
         )}
       </button>
+
+      {/*
+        Trust line (§4). Deliberately small and single-line so it reassures
+        without competing with the CTA — but the policy links are real <a>
+        elements at readable contrast, not grey micro-text, because a buyer
+        checking them is exactly the buyer worth reassuring.
+      */}
+      {showTrustLine && (
+      <p
+        className={`mt-2.5 text-center text-fluid-xs leading-relaxed ${
+          trustLineOnDark ? "text-navy-200" : "text-ink-soft"
+        }`}
+      >
+        Secure payment <span aria-hidden="true">•</span> Digital delivery{" "}
+        <span aria-hidden="true">•</span>{" "}
+        <Link
+          href={siteConfig.REFUND_POLICY_URL}
+          className={`font-medium underline ${trustLineOnDark ? "text-teal-300" : "text-teal-700"}`}
+        >
+          Refund Policy
+        </Link>{" "}
+        <span aria-hidden="true">•</span>{" "}
+        <Link
+          href={siteConfig.PRIVACY_URL}
+          className={`font-medium underline ${trustLineOnDark ? "text-teal-300" : "text-teal-700"}`}
+        >
+          Privacy Policy
+        </Link>
+      </p>
+      )}
 
       {mode === "test" && (
         <p className="mt-2 text-center text-fluid-xs font-semibold text-amber-700">

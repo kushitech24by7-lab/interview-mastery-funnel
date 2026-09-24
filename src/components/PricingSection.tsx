@@ -147,6 +147,8 @@ export default function PricingSection() {
                     label={`Get instant access — ${displayPrices.special}`}
                     location="pricing_card"
                     fullWidth
+                    showTrustLine
+                    trustLineOnDark
                   />
                 </div>
 

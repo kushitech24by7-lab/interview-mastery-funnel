@@ -57,33 +57,35 @@ export const siteConfig = {
   REFERENCE_PRICE: "₹2,499",
 
   // ── Support (brief §32 — buyers must see who to contact) ──────────────────
-  SUPPORT_EMAIL: "suport@interviewmastery.com",
+  /**
+   * NOTE: main set this to "suport@interviewmastery.com". The missing "p" in
+   * "suport" is corrected here — every policy page and the checkout trust
+   * block point at this address, so a typo silently blackholes refund
+   * requests. The .com domain from main is kept (it has live MX records);
+   * confirm whether .com or .shop is the intended support mailbox.
+   */
+  SUPPORT_EMAIL: "support@interviewmastery.com",
   /** Digits only with country code, e.g. "919876543210". Leave placeholder to hide WhatsApp UI. */
   SUPPORT_WHATSAPP: "[SUPPORT_WHATSAPP]",
   SUPPORT_HOURS: "[e.g. Mon–Sat, 10am–7pm IST]",
 
   // ── Legal (brief §50 — placeholders, never invented policies) ─────────────
   /**
-   * The registered merchant name on the Razorpay account. This may legitimately
-   * differ from the customer-facing brand, so it stays separate (§51) and is
-   * NOT auto-filled with "Interview Mastery".
+   * The business name shown on legal pages and in the checkout trust block.
+   * No registration number, GSTIN, PAN or registered address is recorded here
+   * because none has been supplied — and inventing one would be a false
+   * statutory disclosure.
    */
   LEGAL_BUSINESS_NAME: "Interview Mastery",
-  /**
-   * These routes exist and render, but their CONTENT is placeholder text that
-   * must be replaced with real policies before launch. See src/app/(legal)/.
-   */
+  /** Published legal routes. See src/app/(legal)/. */
   TERMS_URL: "/terms",
   PRIVACY_URL: "/privacy-policy",
   REFUND_POLICY_URL: "/refund-policy",
   CONTACT_URL: "/contact",
   DISCLAIMER_URL: "/disclaimer",
-  /**
-   * Brief §36: the FAQ must state the real refund policy. Until you supply it,
-   * the FAQ says the policy is published at the refund link rather than
-   * inventing terms. Replace with your actual policy sentence.
-   */
-  REFUND_POLICY_SUMMARY: "[ACTUAL_REFUND_POLICY — e.g. 'This is a digital product delivered immediately after payment. Refunds are handled as described in our Refund Policy.']",
+  /** One-line summary shown in the FAQ; the full terms live at /refund-policy. */
+  REFUND_POLICY_SUMMARY:
+    "Complete Interview Mastery is a digital product delivered immediately after payment. If you are charged twice, or you pay but cannot access the files and support cannot resolve it, contact us within 7 days and we will review a refund. Because the material is downloadable, change-of-mind requests may not qualify once the files have been substantially accessed.",
 
   // ── Payments (public key only) ────────────────────────────────────────────
   /**
@@ -91,11 +93,11 @@ export const siteConfig = {
    * the live `rzp_live_*` key when you go live.
    *
    * The key actually used by the checkout modal is the one the SERVER returns
-   * from /api/razorpay/create-order (read from the RAZORPAY_ env var).
+   * from /api/razorpay/create-order (read from the RAZORPAY_KEY_ID env var).
    * This copy exists only so the CTA can tell, before any network call, whether
    * payments are configured at all. The KEY SECRET never appears here.
    */
-  RAZORPAY_KEY_ID: "rzp_test_TfSDZuZH4688Vv",
+  RAZORPAY_KEY_ID: "rzp_test_TfnnDtRJp0Z4S9",
 
   // ── Analytics (brief §46) ─────────────────────────────────────────────────
   META_PIXEL_ID: "[META_PIXEL_ID]",
@@ -106,6 +108,8 @@ export const siteConfig = {
   OG_IMAGE: "/og/complete-interview-mastery.jpg",
   /** Apex domain is canonical; www redirects to it (§34). */
   CANONICAL_HOST: "interviewmastery.shop",
+  /** Shown on the legal pages. Update when a policy materially changes. */
+  POLICY_LAST_UPDATED: "September 23, 2026",
 
   // ── Feature flags ─────────────────────────────────────────────────────────
   /**

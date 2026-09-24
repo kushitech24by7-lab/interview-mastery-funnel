@@ -103,6 +103,8 @@ export default function FinalCTA() {
             <CheckoutButton
               label={`Get Complete Interview Mastery — ${displayPrices.special}`}
               location="final_cta"
+              showTrustLine
+              trustLineOnDark
             />
           </div>
 

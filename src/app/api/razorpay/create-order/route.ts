@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import Razorpay from "razorpay";
-import { serverConfig } from "@/lib/server-config";
+import { serverConfig, PaymentConfigError } from "@/lib/server-config";
 import { store } from "@/lib/order-store";
 
 export const runtime = "nodejs";
@@ -144,6 +144,28 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("[create-order] failed:", error);
+
+    /**
+     * A deployment misconfiguration (e.g. a test key on a production deploy).
+     * Surfaced as its own code and logged loudly, because the generic
+     * "please try again" response is actively misleading here: retrying will
+     * fail identically until an operator changes an environment variable.
+     */
+    if (error instanceof PaymentConfigError) {
+      console.error(
+        `[create-order] PAYMENT MISCONFIGURED (${error.code}). ` +
+          `This will fail for every buyer until it is fixed. ${error.message}`
+      );
+      return NextResponse.json(
+        {
+          error: "payment_misconfigured",
+          code: error.code,
+          message:
+            "Payments are temporarily unavailable. Our team has been notified — please contact support if you need this urgently.",
+        },
+        { status: 503 }
+      );
+    }
 
     // Razorpay returns 401 when the key id/secret pair is wrong, revoked, or a
     // test key is used against live mode. This is by far the most common setup

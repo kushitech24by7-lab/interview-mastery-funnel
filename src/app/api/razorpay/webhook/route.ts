@@ -17,9 +17,14 @@ export const dynamic = "force-dynamic";
  * rather than a support nightmare.
  *
  * Configure in Razorpay Dashboard → Settings → Webhooks:
- *   URL:    https://your-domain.com/api/razorpay/webhook
+ *   URL:    https://interviewmastery.shop/api/razorpay/webhook
  *   Events: payment.captured, payment.failed
  *   Secret: must equal RAZORPAY_WEBHOOK_SECRET
+ *
+ * The URL must include the trailing `/webhook` segment. Registering
+ * `…/api/razorpay/` instead yields a 308 redirect, which Razorpay treats as a
+ * failed delivery — this route never runs and the safety net above is silently
+ * dead. See DEPLOYMENT.md §4 for how to verify the registered URL.
  *
  * Signature scheme: HMAC_SHA256(raw_request_body, webhook_secret), compared
  * against the `x-razorpay-signature` header. The RAW body must be used — do not
