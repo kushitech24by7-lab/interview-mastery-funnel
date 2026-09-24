@@ -2,6 +2,15 @@ import { NextResponse } from "next/server";
 import Razorpay from "razorpay";
 import { serverConfig, PaymentConfigError } from "@/lib/server-config";
 import { store } from "@/lib/order-store";
+import { validateEmail, validatePhone } from "@/lib/contact-validation";
+import {
+  sendEmail,
+  checkoutStartedEmail,
+  idempotency,
+  emailConfig,
+  rupeeLabel,
+  maskEmail,
+} from "@/lib/email";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -77,6 +86,32 @@ export async function POST(request: Request) {
       body = {};
     }
 
+    /*
+     * Re-validate the contact details SERVER-SIDE.
+     *
+     * The modal validates first for fast feedback, but that is UX only —
+     * anything the browser enforces can be bypassed from devtools. These are
+     * the values that get written onto the Razorpay order and later used to
+     * decide where the paid product is delivered, so they are validated here
+     * with the same shared rules the form used.
+     */
+    const emailCheck = validateEmail(body.email);
+    if (!emailCheck.ok) {
+      return NextResponse.json(
+        { error: "invalid_email", field: "email", message: emailCheck.error },
+        { status: 400 }
+      );
+    }
+    const phoneCheck = validatePhone(body.phone);
+    if (!phoneCheck.ok) {
+      return NextResponse.json(
+        { error: "invalid_phone", field: "phone", message: phoneCheck.error },
+        { status: 400 }
+      );
+    }
+    const customerEmail = emailCheck.value!;
+    const customerPhone = phoneCheck.value!;
+
     const amount = serverConfig.pricePaise; // server-authoritative
     const currency = serverConfig.currency;
 
@@ -104,8 +139,19 @@ export async function POST(request: Request) {
 
     // Razorpay notes: max 15 keys, values must be strings and are capped at 256 chars.
     const attribution = body.attribution || {};
+    /*
+     * THE TRANSACTION RECORD.
+     *
+     * With no database, the Razorpay order IS the record. These notes are
+     * written server-side from validated values and cannot be altered by the
+     * browser afterwards, so fulfilment can fetch the order later and trust
+     * whose address it finds. The product, amount and currency are likewise
+     * decided here, never accepted from the request.
+     */
     const notes: Record<string, string> = {
       product: "complete-interview-mastery",
+      customer_email: customerEmail,
+      customer_phone: customerPhone,
     };
     for (const key of ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "fbclid"]) {
       const value = sanitise(attribution[key], 200);
@@ -125,14 +171,62 @@ export async function POST(request: Request) {
       currency,
       status: "created",
       createdAt: new Date().toISOString(),
-      customerEmail: sanitise(body.email),
+      customerEmail,
       customerName: sanitise(body.name),
-      customerPhone: sanitise(body.phone, 20),
+      customerPhone,
       attribution: attribution as never,
       notes,
     });
 
-    // Only non-sensitive fields are returned to the browser.
+    /*
+     * Internal "checkout started" notification.
+     *
+     * Deliberately NOT awaited before responding, and wrapped so a rejection
+     * can never surface: a support notification failing is not a reason to
+     * stop a customer paying. The buyer's checkout continues regardless, and
+     * the failure is logged for operators.
+     */
+    void (async () => {
+      try {
+        const template = checkoutStartedEmail({
+          email: customerEmail,
+          phone: customerPhone,
+          orderId: order.id,
+          amountLabel: rupeeLabel(amount),
+          status: "Checkout Started",
+          timestamp: new Date().toISOString(),
+        });
+        const result = await sendEmail({
+          to: emailConfig.supportEmail,
+          subject: template.subject,
+          html: template.html,
+          text: template.text,
+          replyTo: customerEmail,
+          idempotencyKey: idempotency.checkoutStarted(order.id),
+        });
+        if (!result.ok && !result.skipped) {
+          console.error("[create-order] checkout-start notification failed", {
+            orderId: order.id,
+            reason: result.error,
+          });
+        }
+      } catch (error) {
+        console.error("[create-order] checkout-start notification threw", {
+          orderId: order.id,
+          reason: error instanceof Error ? error.message : "unknown",
+        });
+      }
+    })();
+
+    console.info("[create-order] created", {
+      orderId: order.id,
+      // Masked: full customer addresses do not belong in production logs.
+      customer: maskEmail(customerEmail),
+    });
+
+    // Only non-sensitive fields are returned to the browser. The customer
+    // notes deliberately are NOT echoed back — the browser gave us those
+    // values and has no need to read them again.
     return NextResponse.json({
       orderId: order.id,
       amount,

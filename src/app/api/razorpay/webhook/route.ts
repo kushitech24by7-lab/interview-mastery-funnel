@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { serverConfig } from "@/lib/server-config";
 import { store } from "@/lib/order-store";
+import { fulfilOrder } from "@/lib/fulfilment";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -78,8 +79,28 @@ export async function POST(request: Request) {
   if (event.event === "payment.captured") {
     await store.markPaid(orderId, paymentId);
     console.info("[webhook] payment captured", { orderId, paymentId });
-    // OPTIONAL: trigger your delivery email here so the buyer receives the
-    // access link even if they never returned to the success page.
+
+    /*
+     * Deliver from here too — this is the whole point of the webhook. If the
+     * buyer closed the tab before /api/razorpay/verify ran, this is the only
+     * path that reaches them.
+     *
+     * It is SAFE to call alongside the verify route because fulfilOrder keys
+     * both sends on the Razorpay payment id, and Resend deduplicates on that
+     * key. The normal case (verify succeeds, then the webhook arrives) sends
+     * one email, not two.
+     *
+     * Not awaited into the response body: Razorpay needs a prompt 200 or it
+     * retries, and a mail failure must not turn into a webhook retry storm.
+     */
+    try {
+      await fulfilOrder({ orderId, paymentId, source: "webhook" });
+    } catch (error) {
+      console.error("[webhook] fulfilment threw", {
+        orderId,
+        reason: error instanceof Error ? error.message : "unknown",
+      });
+    }
   } else if (event.event === "payment.failed") {
     await store.markFailed(orderId, payment?.error_description || "payment_failed");
     console.info("[webhook] payment failed", { orderId, paymentId });
