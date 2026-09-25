@@ -89,8 +89,17 @@ export const siteConfig = {
 
   // ── Payments (public key only) ────────────────────────────────────────────
   /**
-   * PUBLIC key id — safe in the browser bundle. This is a TEST key; swap it for
-   * the live `rzp_live_*` key when you go live.
+   * PUBLIC key id — safe in the browser bundle.
+   *
+   * This copy is ONLY a pre-flight hint so the CTA can tell, before any network
+   * call, whether payments are configured at all. The key the checkout modal
+   * actually uses is the one the SERVER returns from /api/razorpay/create-order,
+   * read from RAZORPAY_KEY_ID.
+   *
+   * It therefore does not have to match your local .env.local — a live value
+   * here with a test key in the environment is harmless, not a mode mismatch.
+   * What must always agree is RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET, which
+   * are a single Razorpay-issued pair.
    *
    * The key actually used by the checkout modal is the one the SERVER returns
    * from /api/razorpay/create-order (read from the RAZORPAY_KEY_ID env var).

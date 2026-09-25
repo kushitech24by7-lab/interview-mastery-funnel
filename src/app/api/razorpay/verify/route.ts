@@ -43,6 +43,7 @@ export async function POST(request: Request) {
       );
     }
 
+    console.info("[Payment] verification started");
     const body = (await request.json()) as VerifyBody;
     const orderId = body.razorpay_order_id;
     const paymentId = body.razorpay_payment_id;
@@ -80,6 +81,8 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    console.info("[Payment] signature valid", { orderId, paymentId });
 
     const record = await store.get(orderId);
 
@@ -143,7 +146,19 @@ export async function POST(request: Request) {
      * Delivery is idempotent on the payment id, so a retried verify call, a
      * webhook retry or a refreshed success page all collapse to one email.
      */
+    console.info("[Payment] gateway confirmed", {
+      orderId,
+      paymentId,
+      status: gateway.status ?? null,
+      amount: gateway.amount ?? null,
+    });
+
     const customer = await customerFromOrder(orderId);
+    console.info("[Payment] Razorpay order retrieved", {
+      orderId,
+      // Presence, not the address itself — production logs are widely readable.
+      customerEmailFound: Boolean(customer.email),
+    });
     const fulfilment = await fulfilOrder({
       orderId,
       paymentId,
