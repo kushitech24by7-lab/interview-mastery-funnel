@@ -135,4 +135,13 @@ export const serverConfig = {
 
 export const ACCESS_COOKIE = "ml_access";
 /** Access token lifetime. Short enough to limit link sharing, long enough to be usable. */
-export const ACCESS_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days
+/**
+ * Purchase-session lifetime: 72 hours.
+ *
+ * Long enough that a buyer can close the tab and come back over a weekend to
+ * reopen their bundle link, short enough that a shared or stolen cookie stops
+ * working quickly. (Was 7 days, tightened to the 24–72h band now that this
+ * cookie is the only thing standing between a visitor and the paid product.)
+ * The emailed link is the durable copy — this session is a convenience.
+ */
+export const ACCESS_TOKEN_TTL_SECONDS = 60 * 60 * 72; // 72 hours

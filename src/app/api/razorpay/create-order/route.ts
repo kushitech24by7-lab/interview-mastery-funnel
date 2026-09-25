@@ -181,12 +181,17 @@ export async function POST(request: Request) {
     /*
      * Internal "checkout started" notification.
      *
-     * Deliberately NOT awaited before responding, and wrapped so a rejection
-     * can never surface: a support notification failing is not a reason to
-     * stop a customer paying. The buyer's checkout continues regardless, and
-     * the failure is logged for operators.
+     * AWAITED, despite being non-essential. It was previously fired without
+     * awaiting, which on Vercel is unreliable: the function can be frozen or
+     * torn down as soon as the response is returned, so the HTTP request to
+     * the mail provider may never leave. A promise that is never settled is
+     * not "best effort" — it is silently dropped work.
+     *
+     * The cost is one extra API round trip before checkout opens, and it is
+     * wrapped so that neither a failure nor a rejection can stop the buyer
+     * paying: on any error we log and continue to return the order.
      */
-    void (async () => {
+    await (async () => {
       try {
         const template = checkoutStartedEmail({
           email: customerEmail,

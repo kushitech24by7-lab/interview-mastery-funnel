@@ -44,6 +44,32 @@ PRODUCT_DOWNLOAD_URL=https://drive.google.com/drive/folders/xxxxxxxxxxxxx
 ACCESS_TOKEN_SECRET=<64-char random hex>
 ```
 
+### If buyers are not receiving the email
+
+Ask the deployment what it actually has, instead of guessing:
+
+```bash
+curl https://interviewmastery.shop/api/diagnostics -H "x-diagnostics-token: YOUR_TOKEN"
+```
+
+`email.willSend: false` means **nothing is being delivered** — the variables
+below are missing on that deployment. The route returns only which variables
+are set, their lengths and non-secret prefixes; never a value. It 404s unless
+`DIAGNOSTICS_TOKEN` is set.
+
+In the Vercel function logs, these strings are the ones that matter:
+
+| Log line | Meaning |
+| --- | --- |
+| `[email] NOT CONFIGURED` | `RESEND_API_KEY` / `EMAIL_FROM` missing — nothing sent |
+| `[email] PROVIDER REJECTED SEND` | Resend refused; the logged `status` + `errorType` say why |
+| `[fulfilment] DELIVERY FAILED` | Buyer paid and did **not** get the product — act on these |
+| `[email] provider accepted` | Success, with the provider message id |
+
+Common provider rejections: **403 + "domain is not verified"** → DNS unfinished;
+**401** → wrong or rotated key; **422 + "Invalid `from`"** → `EMAIL_FROM` is not
+on a verified domain.
+
 ### Email delivery (Resend) — required for fulfilment
 
 The product is delivered **by email**, so these three must be set in
