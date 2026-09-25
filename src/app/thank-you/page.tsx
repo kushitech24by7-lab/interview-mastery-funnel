@@ -65,10 +65,11 @@ export default async function SuccessPage({ searchParams }: Props) {
             <h1 className="mt-2 text-fluid-3xl font-bold text-white">
               You're in.
               <br />
-              <span className="text-amber-400">Now turn the material into preparation.</span>
+              <span className="text-amber-400">Your bundle is ready below.</span>
             </h1>
             <p className="mx-auto mt-4 max-w-xl text-fluid-sm text-navy-200">
-              Your {siteConfig.TOTAL_PRODUCTS}-resource Complete Interview Mastery library is ready.
+              Your payment has been confirmed successfully. You now have access to the complete
+              {" "}{siteConfig.TOTAL_PRODUCTS}-resource interview preparation system.
             </p>
 
             <dl className="mx-auto mt-6 flex max-w-md flex-wrap justify-center gap-x-6 gap-y-2 text-fluid-xs">

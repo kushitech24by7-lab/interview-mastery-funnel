@@ -27,6 +27,8 @@ const RESEND_ENDPOINT = "https://api.resend.com/emails";
 export interface SendResult {
   ok: boolean;
   id?: string;
+  /** Provider HTTP status, for diagnostics. */
+  status?: number;
   /** Safe to log: contains no API key and no message body. */
   error?: string;
   /** True when email is not configured at all, as opposed to a send failure. */
@@ -107,8 +109,20 @@ interface SendArgs {
  */
 export async function sendEmail(args: SendArgs): Promise<SendResult> {
   if (!emailConfig.isConfigured) {
-    console.warn(
-      "[email] RESEND_API_KEY / EMAIL_FROM not set — skipping send. See DEPLOYMENT.md."
+    /*
+     * This is an ERROR, not a warning.
+     *
+     * It fired as console.warn before, which is why the missing configuration
+     * went unnoticed in production: a warning in a Vercel function log looks
+     * like noise, while buyers were paying and receiving nothing. Anything
+     * that silently stops a paid product reaching its buyer deserves the
+     * loudest level available and a message that names the fix.
+     */
+    console.error(
+      "[email] NOT CONFIGURED — no email was sent. " +
+        `RESEND_API_KEY ${process.env.RESEND_API_KEY ? "set" : "MISSING"}, ` +
+        `EMAIL_FROM ${process.env.EMAIL_FROM ? "set" : "MISSING"}. ` +
+        "Set both in Vercel → Settings → Environment Variables and redeploy."
     );
     return { ok: false, skipped: true, error: "email_not_configured" };
   }
@@ -141,12 +155,26 @@ export async function sendEmail(args: SendArgs): Promise<SendResult> {
       | null;
 
     if (!response.ok) {
-      // Log the provider's reason, never the API key or the body.
+      /*
+       * Provider diagnostics, safe to log: HTTP status, Resend's error `name`
+       * and its human-readable message. Never the API key, the recipient or
+       * the message body.
+       *
+       * The common failures each have a distinct signature here:
+       *   403 + "domain is not verified"  → DNS not finished in Resend
+       *   401 / "API key is invalid"      → wrong or rotated RESEND_API_KEY
+       *   422 + "Invalid `from`"          → EMAIL_FROM not on a verified domain
+       */
       const reason = payload?.message || payload?.name || `http_${response.status}`;
-      console.error("[email] send failed", { status: response.status, reason });
-      return { ok: false, error: reason };
+      console.error("[email] PROVIDER REJECTED SEND", {
+        status: response.status,
+        errorType: payload?.name || null,
+        message: reason,
+      });
+      return { ok: false, error: reason, status: response.status };
     }
 
+    console.info("[email] provider accepted", { messageId: payload?.id || null });
     return { ok: true, id: payload?.id };
   } catch (error) {
     console.error("[email] send threw", {
@@ -192,30 +220,63 @@ export function deliveryEmail(deliveryUrl: string): { subject: string; html: str
   const safeUrl = escapeHtml(deliveryUrl);
   const support = escapeHtml(emailConfig.supportEmail);
 
+  /*
+   * Deliberately plain HTML: tables, inline styles, no web fonts, no images,
+   * no background images, no media queries beyond what a single-column layout
+   * needs. Gmail strips <style> blocks, Outlook ignores flexbox, and image-
+   * heavy transactional mail is more likely to be classified as promotional —
+   * which for a delivery email means the buyer never finds it.
+   *
+   * The link appears TWICE on purpose: as a button, and as visible text
+   * underneath, so the email still works when images or buttons are blocked.
+   */
+  const proof = [
+    "12 resources",
+    "619 pages",
+    "500 interview questions",
+    "100 STAR examples",
+    "14 answer frameworks",
+    "30 spoken practice drills",
+    "30 templates &amp; trackers",
+  ];
+
   return {
     subject: `Your ${PRODUCT} Access`,
     html: layout(`
-<p style="margin:0 0 14px;">Hi,</p>
-<p style="margin:0 0 14px;">Thank you for purchasing <strong>${PRODUCT}</strong>. Your payment has been successfully verified.</p>
-<p style="margin:0 0 20px;">You can access your resources here:</p>
+<p style="margin:0 0 6px;font-size:13px;font-weight:700;color:#0f766e;letter-spacing:.6px;">PAYMENT CONFIRMED</p>
+<p style="margin:0 0 16px;font-size:20px;font-weight:700;color:#0b1424;">${PRODUCT}</p>
+<p style="margin:0 0 20px;">Thank you for your purchase. Your complete interview preparation bundle is ready.</p>
 <p style="margin:0 0 22px;">
-  <a href="${safeUrl}" style="display:inline-block;background:#f0b429;color:#0b1424;text-decoration:none;font-weight:700;padding:13px 26px;border-radius:8px;">Open your resources</a>
+  <a href="${safeUrl}" style="display:inline-block;background:#f0b429;color:#0b1424;text-decoration:none;font-weight:700;font-size:15px;padding:14px 28px;border-radius:8px;">Access your interview bundle</a>
 </p>
-<p style="margin:0 0 18px;font-size:13px;color:#6b7280;word-break:break-all;">If the button does not work, copy this link:<br><a href="${safeUrl}" style="color:#0f766e;">${safeUrl}</a></p>
-<p style="margin:0 0 14px;">We recommend saving this email for future access.</p>
-<p style="margin:0;">If you have any trouble accessing the resources, contact <a href="mailto:${support}" style="color:#0f766e;">${support}</a>.</p>
+<p style="margin:0 0 20px;font-size:13px;color:#6b7280;word-break:break-all;">
+  If the button does not work, open this link:<br>
+  <a href="${safeUrl}" style="color:#0f766e;">${safeUrl}</a>
+</p>
+<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;background:#faf8f5;border-radius:8px;margin:0 0 20px;">
+  <tr><td style="padding:14px 16px;font-size:13px;color:#4b5563;line-height:1.8;">
+    ${proof.join(' &nbsp;&middot;&nbsp; ')}
+  </td></tr>
+</table>
+<p style="margin:0 0 14px;">Save this email so you can return to your resources later.</p>
+<p style="margin:0;">Need help? <a href="mailto:${support}" style="color:#0f766e;">${support}</a></p>
 <p style="margin:18px 0 0;">Best,<br>${BRAND}</p>`),
     text: [
-      "Hi,",
+      "PAYMENT CONFIRMED",
       "",
-      `Thank you for purchasing ${PRODUCT}. Your payment has been successfully verified.`,
+      PRODUCT,
       "",
-      "You can access your resources here:",
+      "Thank you for your purchase. Your complete interview preparation bundle is ready.",
+      "",
+      "Access your bundle:",
       deliveryUrl,
       "",
-      "We recommend saving this email for future access.",
+      "12 resources · 619 pages · 500 interview questions · 100 STAR examples",
+      "14 answer frameworks · 30 spoken practice drills · 30 templates & trackers",
       "",
-      `If you have any trouble accessing the resources, contact ${emailConfig.supportEmail}`,
+      "Save this email so you can return to your resources later.",
+      "",
+      `Need help? ${emailConfig.supportEmail}`,
       "",
       "Best,",
       BRAND,

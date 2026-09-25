@@ -67,9 +67,16 @@ export async function customerFromOrder(orderId: string): Promise<CustomerFromOr
     const phone = typeof notes.customer_phone === "string" ? notes.customer_phone : undefined;
     return { email, phone };
   } catch (error) {
+    const e = error as {
+      statusCode?: number;
+      error?: { code?: string; description?: string };
+      message?: string;
+    };
     console.error("[fulfilment] could not fetch order from Razorpay", {
       orderId,
-      reason: error instanceof Error ? error.message : "unknown",
+      status: e?.statusCode ?? null,
+      code: e?.error?.code ?? null,
+      description: e?.error?.description ?? e?.message ?? "no description",
     });
     return {};
   }
@@ -119,9 +126,22 @@ export async function verifyPaymentWithRazorpay(
 
     return { ok: true, amount, currency: String(payment.currency), status: payment.status };
   } catch (error) {
+    /*
+     * Razorpay SDK errors are not plain Errors: the useful detail sits in
+     * `statusCode` and `error.description`, and `error.message` is often
+     * undefined — which previously logged the bare word "unknown" and threw
+     * away the only explanation of why a paying customer was not fulfilled.
+     */
+    const e = error as {
+      statusCode?: number;
+      error?: { code?: string; description?: string; reason?: string };
+      message?: string;
+    };
     console.error("[fulfilment] payment fetch failed", {
       paymentId,
-      reason: error instanceof Error ? error.message : "unknown",
+      status: e?.statusCode ?? null,
+      code: e?.error?.code ?? null,
+      description: e?.error?.description ?? e?.message ?? "no description",
     });
     return { ok: false, reason: "fetch_failed" };
   }
@@ -166,6 +186,12 @@ export async function fulfilOrder(args: {
     return { delivered: false, reason: "no_customer_email" };
   }
 
+  console.info("[Email] delivery started", {
+    orderId: args.orderId,
+    to: maskEmail(customer.email),
+    source: args.source,
+  });
+
   let delivery: SendResult;
   try {
     const template = deliveryEmail(serverConfig.productDownloadUrl);
@@ -187,6 +213,7 @@ export async function fulfilOrder(args: {
   }
 
   if (delivery.ok) {
+    console.info("[Email] provider success", { messageId: delivery.id ?? null });
     console.info("[fulfilment] delivered", {
       orderId: args.orderId,
       paymentId: args.paymentId,
@@ -194,6 +221,10 @@ export async function fulfilOrder(args: {
       source: args.source,
     });
   } else {
+    console.error("[Email] provider failure", {
+      status: delivery.status ?? null,
+      error: delivery.error ?? "unknown",
+    });
     console.error("[fulfilment] DELIVERY FAILED — customer paid but has no email", {
       orderId: args.orderId,
       paymentId: args.paymentId,

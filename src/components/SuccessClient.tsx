@@ -98,43 +98,116 @@ export default function SuccessClient({ orderId, paymentId, delivered = false, c
 
   return (
     <div className="mt-6 space-y-6">
-      {/* ── Delivery status card ── */}
+      {/* ── Bundle delivery card ── */}
+      <div className="overflow-hidden rounded-xl2 border-2 border-teal-600/25 bg-white shadow-lift">
+        <div className="bg-gradient-to-br from-navy-950 to-navy-900 p-6 text-center sm:p-8">
+          <span
+            className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-teal-500"
+            aria-hidden="true"
+          >
+            <svg className="h-7 w-7 text-white" viewBox="0 0 20 20" fill="currentColor">
+              <path
+                fillRule="evenodd"
+                d="M16.7 5.3a1 1 0 010 1.4l-7.5 7.5a1 1 0 01-1.4 0l-3.5-3.5a1 1 0 111.4-1.4l2.8 2.8 6.8-6.8a1 1 0 011.4 0z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </span>
+          <h2 className="mt-4 text-fluid-xl font-bold text-white">{siteConfig.PRODUCT_NAME}</h2>
+          <p className="mt-1.5 text-fluid-sm text-navy-200">
+            Your complete preparation system is ready.
+          </p>
+
+          <ul className="mx-auto mt-5 grid max-w-sm grid-cols-2 gap-x-4 gap-y-1.5 text-fluid-xs text-navy-100">
+            <li>{siteConfig.TOTAL_PRODUCTS} resources</li>
+            <li>{siteConfig.TOTAL_PAGES} pages</li>
+            <li>{siteConfig.TOTAL_QUESTIONS} questions</li>
+            <li>{siteConfig.TOTAL_STAR_EXAMPLES} STAR examples</li>
+            <li>{siteConfig.TOTAL_FRAMEWORKS} answer frameworks</li>
+            <li>{siteConfig.TOTAL_SPOKEN_DRILLS} practice drills</li>
+          </ul>
+        </div>
+
+        <div className="p-6 text-center sm:p-8">
+          {/*
+            The CTA points at /api/access-bundle, NOT at Google Drive.
+            That route re-checks the signed purchase cookie server-side and
+            only then redirects. Putting the Drive URL in this href would ship
+            the paid deliverable inside the page HTML and the JS bundle, where
+            View Source is enough to take it without paying.
+          */}
+          <a
+            href="/api/access-bundle"
+            onClick={() => track("Access_Click", { orderId })}
+            className="btn-primary w-full text-center sm:w-auto"
+          >
+            Open your Complete Interview bundle
+            <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path d="M11 3h6v6h-2V6.4l-7.3 7.3-1.4-1.4L13.6 5H11V3zM5 5h3v2H6v7h7v-2h2v4H5V5z" />
+            </svg>
+          </a>
+          <p className="mt-2.5 text-fluid-xs text-ink-faint">Google Drive · Instant access</p>
+
+          {/*
+            Email status must reflect what the provider ACTUALLY reported.
+            Saying "we've sent it" when the send failed would send the buyer
+            hunting through a spam folder for a message that does not exist.
+          */}
+          <div className="mt-6 rounded-lg bg-sand p-4 text-left">
+            {delivered ? (
+              <>
+                <p className="text-fluid-sm text-ink-soft">
+                  We have also sent your access link to{" "}
+                  {customerEmail ? (
+                    <strong className="text-navy-950">{customerEmail}</strong>
+                  ) : (
+                    "your email address"
+                  )}
+                  .
+                </p>
+                <p className="mt-1.5 text-fluid-xs text-ink-faint">
+                  Please check your Inbox, Promotions and Spam folders, and save the email so you
+                  can return to your resources later.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-fluid-sm font-semibold text-navy-950">
+                  Your payment is confirmed and your bundle is available above.
+                </p>
+                <p className="mt-1.5 text-fluid-xs leading-relaxed text-ink-soft">
+                  We could not confirm email delivery right now, so please open the bundle above
+                  and save the Drive folder to your own account.
+                  {supportHref && " If you need assistance, contact support."}
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Start here ── */}
       <div className="card p-6 sm:p-8">
-        <h2 className="text-fluid-xl font-bold text-navy-950">Your access is on its way</h2>
-
-        {/*
-          The Google Drive link is deliberately NOT rendered here. Delivery is
-          by email, so the link lives only in the message sent to the verified
-          buyer's address — never in this page's HTML, its JS bundle or a query
-          string, any of which would make it shareable by anyone who reached
-          this URL.
-        */}
-        {delivered ? (
-          <p className="mt-3 text-fluid-sm leading-relaxed text-ink-soft">
-            We have sent your {siteConfig.PRODUCT_NAME} access
-            {customerEmail ? " to " : "."}
-            {customerEmail && <strong className="text-navy-950">{customerEmail}</strong>}
-            {customerEmail && "."}
-          </p>
-        ) : (
-          <p className="mt-3 text-fluid-sm leading-relaxed text-ink-soft">
-            Your purchase is confirmed. We are sending your {siteConfig.PRODUCT_NAME} access
-            {customerEmail ? " to " : " to your email address"}
-            {customerEmail && <strong className="text-navy-950">{customerEmail}</strong>}
-            . If it has not arrived shortly, contact support and we will send it straight away.
-          </p>
-        )}
-
-        <p className="mt-4 rounded-lg bg-navy-50 p-3 text-fluid-sm text-ink-soft">
-          Please check your <strong className="text-navy-900">Inbox</strong>,{" "}
-          <strong className="text-navy-900">Promotions</strong> and{" "}
-          <strong className="text-navy-900">Spam</strong> folders. We recommend saving the email
-          for future access.
-        </p>
+        <h2 className="text-fluid-lg font-bold text-navy-950">Start here</h2>
+        <ol className="mt-4 space-y-2.5">
+          {[
+            "Open the Complete Interview Mastery bundle above.",
+            "Begin with P01 — the Complete Interview Mastery Handbook.",
+            "Build your evidence bank and STAR stories with P10.",
+            "Follow the 7-day preparation plan in P12 before your interview.",
+          ].map((step, i) => (
+            <li key={step} className="flex gap-3 text-fluid-sm text-ink-soft">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-navy-950 text-fluid-xs font-bold text-white">
+                {i + 1}
+              </span>
+              <span className="pt-0.5">{step}</span>
+            </li>
+          ))}
+        </ol>
 
         {supportHref && (
-          <p className="mt-4 text-fluid-sm text-ink-soft">
-            Need help?{" "}
+          <p className="mt-5 border-t border-navy-100 pt-4 text-fluid-sm text-ink-soft">
+            Questions or access problems?{" "}
             <a href={supportHref} className="font-semibold text-teal-700 underline">
               {siteConfig.SUPPORT_EMAIL}
             </a>
