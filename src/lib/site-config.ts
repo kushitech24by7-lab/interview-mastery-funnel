@@ -100,7 +100,7 @@ export const siteConfig = {
   RAZORPAY_KEY_ID: "rzp_test_TfnnDtRJp0Z4S9",
 
   // ── Analytics (brief §46) ─────────────────────────────────────────────────
-  META_PIXEL_ID: "[META_PIXEL_ID]",
+  META_PIXEL_ID: "1780719466407484",
   GA4_ID: "[GA4_ID]",
 
   // ── SEO / Open Graph (brief §59 items 21–22) ──────────────────────────────
