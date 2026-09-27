@@ -61,8 +61,41 @@ export async function GET(request: Request) {
     ? from.slice(from.lastIndexOf("@") + 1).replace(/>$/, "")
     : null;
 
+  /*
+   * A flat present/absent summary, in the exact shape an operator wants when
+   * production email is failing. The structured detail below stays for
+   * distinguishing "missing" from "malformed", but this block answers the
+   * only question that matters first: is anything required not set?
+   *
+   * NOTE ON NAMES: the delivery URL variable is PRODUCT_DOWNLOAD_URL.
+   * PRODUCT_DELIVERY_URL is NOT read anywhere in this codebase — setting that
+   * name would be silently ignored and the delivery email would ship without
+   * a link.
+   */
+  const required = {
+    RESEND_API_KEY: Boolean(process.env.RESEND_API_KEY),
+    EMAIL_FROM: Boolean(process.env.EMAIL_FROM),
+    SUPPORT_EMAIL: Boolean(process.env.SUPPORT_EMAIL),
+    PRODUCT_DOWNLOAD_URL: Boolean(process.env.PRODUCT_DOWNLOAD_URL),
+    RAZORPAY_KEY_ID: Boolean(process.env.RAZORPAY_KEY_ID),
+    RAZORPAY_KEY_SECRET: Boolean(process.env.RAZORPAY_KEY_SECRET),
+    ACCESS_TOKEN_SECRET: Boolean(process.env.ACCESS_TOKEN_SECRET),
+    PRODUCT_PRICE_PAISE: Boolean(process.env.PRODUCT_PRICE_PAISE),
+  };
+  const missing = Object.entries(required)
+    .filter(([, present]) => !present)
+    .map(([name]) => name);
+
   return NextResponse.json({
     checkedAt: new Date().toISOString(),
+    /** The headline: everything needed to take a payment AND deliver it. */
+    ready: missing.length === 0 && emailConfig.isConfigured,
+    present: required,
+    missing,
+    /** Set but ignored — a common cause of "I added it and nothing changed". */
+    ignoredIfSet: process.env.PRODUCT_DELIVERY_URL
+      ? ["PRODUCT_DELIVERY_URL is set but this codebase reads PRODUCT_DOWNLOAD_URL"]
+      : [],
     deployment: {
       vercelEnv: process.env.VERCEL_ENV || null,
       nodeEnv: process.env.NODE_ENV || null,

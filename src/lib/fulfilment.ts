@@ -177,6 +177,7 @@ export async function fulfilOrder(args: {
   if (!customer.email) {
     // The buyer paid but we have no address — recoverable only by a human, so
     // make sure support hears about it.
+    console.error("[Email] customer email found", { found: false, orderId: args.orderId });
     console.error("[fulfilment] no customer email on order; cannot deliver", {
       orderId: args.orderId,
       paymentId: args.paymentId,
@@ -186,6 +187,7 @@ export async function fulfilOrder(args: {
     return { delivered: false, reason: "no_customer_email" };
   }
 
+  console.info("[Email] customer email found", { found: true, orderId: args.orderId });
   console.info("[Email] delivery started", {
     orderId: args.orderId,
     to: maskEmail(customer.email),
@@ -212,8 +214,20 @@ export async function fulfilOrder(args: {
     delivery = { ok: false, error: "delivery_exception" };
   }
 
+  /*
+   * Logged whether the send succeeded or failed, and BEFORE the branch below.
+   * It separates "the provider answered" from "the request never left" — a
+   * network failure and a rejected send look identical in the result object
+   * but need completely different fixes.
+   */
+  console.info("[Email] Resend response received", {
+    ok: delivery.ok,
+    status: delivery.status ?? null,
+    reachedProvider: !delivery.skipped,
+  });
+
   if (delivery.ok) {
-    console.info("[Email] provider success", { messageId: delivery.id ?? null });
+    console.info("[Email] delivery succeeded", { messageId: delivery.id ?? null });
     console.info("[fulfilment] delivered", {
       orderId: args.orderId,
       paymentId: args.paymentId,
