@@ -46,7 +46,7 @@ export const heroVariants: Record<VariantKey, HeroVariant> = {
     key: "general",
     label: "A — General",
     headline: "Walk into your next interview",
-    headlineAccent: "knowing exactly how to prepare.",
+    headlineAccent: "knowing exactly how to answer.",
     subheadline:
       "Turn your experience into clear, structured answers. Practise the questions that matter, handle difficult questions with confidence, and walk into interview day with a system instead of guesswork.",
   },
